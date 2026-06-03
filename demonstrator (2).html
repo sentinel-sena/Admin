@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SENA V1 — Child Safety Demonstrator</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --ink:#16243a; --ink-soft:#2d4a6b; --orange:#e07b1a; --orange-soft:#fdf0e0;
+    --orange-line:#e8943f; --green:#2a7a2a; --red:#b03a2e; --paper:#fbfaf7; --line:#d9d6cc; --base:17px;
+  }
+  *{box-sizing:border-box;}
+  body{font-family:Georgia,"Times New Roman",serif;color:var(--ink);line-height:1.6;
+       max-width:1040px;margin:0 auto;padding:24px;background:var(--paper);font-size:var(--base);}
+  h1{font-size:30px;margin-bottom:2px;} h2{font-size:22px;margin-top:30px;border-bottom:3px solid var(--orange);padding-bottom:5px;}
+  h3{font-size:18px;margin-top:8px;color:var(--ink-soft);}
+  .status{display:inline-block;background:var(--green);color:#fff;font-size:13px;padding:4px 12px;border-radius:3px;font-family:Arial,sans-serif;letter-spacing:.5px;}
+  .lede{color:#5a6573;font-size:16px;margin-top:6px;}
+  .principle{background:var(--ink);color:#eef3f6;padding:16px 20px;border-radius:6px;margin:18px 0;font-size:16px;}
+  .principle b{color:#e8a84f;}
+  .arial{font-family:Arial,sans-serif;}
+  .filterbar{font-family:Arial,sans-serif;font-size:13px;margin:18px 0 4px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  .filterbar .lbl{color:#888;}
+  .chip{padding:4px 11px;border-radius:14px;border:2px solid var(--line);cursor:pointer;font-weight:bold;background:#fff;color:#666;}
+  .chip.on{border-color:var(--ink);color:var(--ink);background:#eef3f7;}
+  .tabbar{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;border-bottom:3px solid var(--ink);}
+  .tab{font-family:Arial,sans-serif;font-size:14px;font-weight:bold;padding:9px 14px;background:#ece8dd;
+       color:var(--ink-soft);border:2px solid var(--line);border-bottom:none;border-radius:8px 8px 0 0;cursor:pointer;margin-bottom:-3px;position:relative;}
+  .tab:hover{background:#f3efe4;}
+  .tab.active{background:#fff;color:var(--ink);border-color:var(--ink);border-bottom:3px solid #fff;}
+  .tab.builder{background:var(--orange);color:#fff;border-color:var(--orange);}
+  .tab.builder.active{background:#fff;color:var(--orange);border-color:var(--orange);border-bottom:3px solid #fff;}
+  .tab .pdot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:middle;}
+  .pd-confirmed{background:var(--green);} .pd-delayed{background:#d99000;} .pd-undecided{background:#888;}
+  .pd-deferred{background:#7a5cc0;} .pd-removed{background:var(--red);}
+  .tab.removed{opacity:.55;text-decoration:line-through;}
+  .panel{display:none;background:#fff;border:2px solid var(--ink);border-top:none;border-radius:0 0 8px 8px;padding:22px;}
+  .panel.active{display:block;} .panel.builderpanel{border-color:var(--orange);}
+  .box{border:1px solid var(--line);border-radius:6px;padding:14px 18px;margin:14px 0;background:#fff;}
+  .why{background:#eef3f7;border-left:5px solid var(--ink);padding:12px 18px;margin:14px 0;border-radius:0 4px 4px 0;font-size:16px;}
+  .why b{color:var(--ink);}
+  .outcome{font-family:Arial,sans-serif;font-weight:bold;font-size:17px;}
+  .oc-alert{color:var(--red);} .oc-fail{color:var(--orange);} .oc-none{color:#5a6573;}
+  .stoolbar{font-family:Arial,sans-serif;font-size:13px;background:#f6f3ea;border:1px solid var(--line);
+            border-radius:8px;padding:10px 14px;margin-bottom:14px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;}
+  .stoolbar select,.stoolbar input{font-family:Arial,sans-serif;font-size:13px;padding:5px 8px;border:1.5px solid var(--line);border-radius:5px;}
+  .stoolbar .stamp{color:#999;margin-left:auto;}
+  .commentbox{width:100%;font-family:Arial,sans-serif;font-size:14px;padding:9px 12px;border:1.5px dashed var(--orange);
+              border-radius:6px;margin:10px 0;background:#fffdf6;}
+  .flow{margin:16px 0;}
+  .fnode{display:block;max-width:520px;margin:0 auto;background:var(--orange-soft);border:2.5px solid var(--orange);
+         border-radius:8px;padding:11px 16px;font-family:Arial,sans-serif;text-align:center;}
+  .fnode .t{color:var(--ink);font-weight:bold;font-size:16px;} .fnode .s{color:var(--ink-soft);font-size:13.5px;display:block;margin-top:2px;}
+  .fnode.start{background:var(--ink);border-color:var(--ink);} .fnode.start .t{color:#fff;}
+  .fnode.decision{background:#fff6e9;border-style:dashed;}
+  .fnode.terminal{background:#fbe4df;border-color:var(--red);} .fnode.terminal .t{color:var(--red);}
+  .farrow{text-align:center;color:var(--orange-line);font-weight:bold;font-size:22px;margin:3px 0;}
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-family:Arial,sans-serif;font-size:14.5px;}
+  th{background:var(--ink);color:#fff;text-align:left;padding:9px 11px;} td{padding:9px 11px;border-bottom:1px solid var(--line);vertical-align:top;}
+  tr:nth-child(even) td{background:#f6f6f2;}
+  code{background:#eef0e8;padding:1px 6px;border-radius:3px;font-size:14px;}
+  .input-point{background:#fff8e6;border:1.5px dashed var(--orange);border-radius:6px;padding:14px 18px;margin:16px 0;font-family:Arial,sans-serif;font-size:14.5px;color:#7a5a14;}
+  .input-point b{color:#5a4410;}
+  .common-head{font-family:Arial,sans-serif;font-size:13px;font-weight:bold;letter-spacing:1px;color:#fff;background:var(--ink-soft);display:inline-block;padding:4px 14px;border-radius:4px;margin-top:30px;}
+  .builder-wrap{display:flex;gap:14px;flex-wrap:wrap;}
+  .palette{flex:0 0 200px;background:#f6f3ea;border:2px solid var(--line);border-radius:8px;padding:12px;}
+  .palette h4{margin:4px 0 10px;font-family:Arial,sans-serif;font-size:14px;}
+  .pal-item{background:var(--orange-soft);border:2px solid var(--orange);border-radius:6px;padding:8px 10px;margin:7px 0;font-family:Arial,sans-serif;font-size:13.5px;font-weight:bold;color:var(--ink);cursor:grab;text-align:center;}
+  .pal-item.dec{background:#fff6e9;border-style:dashed;} .pal-item.term{background:#fbe4df;border-color:var(--red);color:var(--red);}
+  .canvas{flex:1;min-width:320px;min-height:380px;background:#fffdf8;border:2px dashed var(--orange);border-radius:8px;padding:14px;}
+  .canvas-empty{color:#b0a98f;font-family:Arial,sans-serif;text-align:center;margin-top:50px;font-size:15px;}
+  .cnode{background:var(--orange-soft);border:2.5px solid var(--orange);border-radius:8px;padding:8px 12px;margin:8px auto;max-width:440px;position:relative;}
+  .cnode.dec{background:#fff6e9;border-style:dashed;} .cnode.term{background:#fbe4df;border-color:var(--red);}
+  .cnode textarea{width:100%;border:none;background:transparent;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;color:var(--ink);text-align:center;resize:vertical;}
+  .cnode.term textarea{color:var(--red);}
+  .cnode .del{position:absolute;top:-9px;right:-9px;background:var(--red);color:#fff;border:none;border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:14px;line-height:1;}
+  .cn-arrow{text-align:center;color:var(--orange-line);font-weight:bold;font-size:22px;}
+  .btn{font-family:Arial,sans-serif;font-size:14px;font-weight:bold;padding:9px 16px;border-radius:6px;border:2px solid var(--ink);background:#fff;color:var(--ink);cursor:pointer;margin:4px 6px 4px 0;}
+  .btn.primary{background:var(--ink);color:#fff;} .btn.orange{background:var(--orange);color:#fff;border-color:var(--orange);}
+  .namefield{font-family:Arial,sans-serif;font-size:15px;padding:8px 10px;border:2px solid var(--line);border-radius:6px;width:58%;margin-bottom:12px;}
+  textarea.jsonarea{width:100%;height:150px;font-family:"Courier New",monospace;font-size:12.5px;border:1.5px solid var(--line);border-radius:6px;padding:10px;}
+  .phone{width:300px;background:#0d0f14;border-radius:28px;padding:14px 12px;margin:10px 0;box-shadow:0 6px 18px rgba(0,0,0,.25);}
+  .phone .screen{background:#1c2430;border-radius:18px;min-height:140px;padding:14px;}
+  .phone .pnotif{background:#fff;border-radius:14px;padding:12px;font-family:Arial,sans-serif;}
+  .phone .pn-head{display:flex;align-items:center;gap:7px;font-size:12px;color:#888;margin-bottom:5px;}
+  .phone .pn-icon{width:22px;height:22px;border-radius:6px;display:inline-block;text-align:center;line-height:22px;color:#fff;font-size:13px;}
+  .phone .pn-title{font-weight:bold;font-size:15px;margin:2px 0;} .phone .pn-body{font-size:13px;color:#333;}
+  .ab-row{font-family:Arial,sans-serif;font-size:14px;margin:8px 0;} .ab-row label{display:inline-block;width:120px;color:var(--ink-soft);font-weight:bold;}
+  .ab-row input,.ab-row select{font-family:Arial,sans-serif;font-size:14px;padding:6px 9px;border:1.5px solid var(--line);border-radius:5px;width:60%;}
+  .nav{font-family:Arial,sans-serif;font-size:13.5px;color:#888;margin-top:30px;border-top:1px solid var(--line);padding-top:12px;}
+</style>
+</head>
+<body>
+
+<span class="status">🟢 SHIPPING — V1</span>
+<h1>SENA — Child Safety Demonstrator</h1>
+<p class="lede">Each tab is one scenario — situation, decision flow, and why. Below the tabs is information common to all. Directors can label, comment, build new scenarios, design the alert, edit escalation, and export everything as JSON.</p>
+
+<div class="principle"><b>The safety principle behind every decision:</b> SENA is an extra vigilant eye that errs toward alerting. Every real event reaches the parent — never silently ignored. When unsure, it alerts anyway. A false alarm is a minor annoyance; a missed child is not acceptable.</div>
+
+<div class="filterbar">
+  <span class="lbl">Show priority:</span>
+  <span class="chip on" data-f="confirmed" onclick="toggleFilter(this)"><span class="pdot pd-confirmed"></span>Confirmed</span>
+  <span class="chip on" data-f="delayed" onclick="toggleFilter(this)"><span class="pdot pd-delayed"></span>Delayed</span>
+  <span class="chip on" data-f="undecided" onclick="toggleFilter(this)"><span class="pdot pd-undecided"></span>Not decided</span>
+  <span class="chip on" data-f="deferred" onclick="toggleFilter(this)"><span class="pdot pd-deferred"></span>Deferred</span>
+  <span class="chip" data-f="removed" onclick="toggleFilter(this)"><span class="pdot pd-removed"></span>Removed (hidden)</span>
+</div>
+
+<div class="tabbar" id="tabbar"></div>
+<div id="panels"></div>
+
+<div class="common-head">COMMON TO ALL SCENARIOS</div>
+
+<h2>Alert types</h2>
+<table>
+<tr><th>Alert type</th><th>When it fires</th><th>Parent gets</th></tr>
+<tr><td style="color:var(--red);font-weight:bold;">Confirmed alert</td><td>Confident child, crossing out, unaccompanied, sustained.</td><td>Full notification + snapshot.</td></tr>
+<tr><td style="color:var(--orange);font-weight:bold;">Fail-safe alert</td><td>Not sure it's a child but a small person crossing out unaccompanied.</td><td>Full notification + snapshot — alerts anyway.</td></tr>
+<tr><td style="color:#5a6573;font-weight:bold;">No alert (monitor)</td><td>Inside not crossing; adult crossing with them; or inbound.</td><td>No interruption; event recorded &amp; viewable.</td></tr>
+</table>
+
+<h2>Alert content designer <span class="lede">(directors decide what the alert looks like in the app)</span></h2>
+<div class="builder-wrap">
+  <div style="flex:1;min-width:280px;">
+    <div class="ab-row"><label>Urgency</label>
+      <select id="abUrg" onchange="renderAlert()">
+        <option value="critical">Critical (red, sound)</option>
+        <option value="high">High (orange)</option>
+        <option value="info">Info (blue, quiet)</option>
+      </select></div>
+    <div class="ab-row"><label>Icon</label>
+      <select id="abIcon" onchange="renderAlert()"><option>⚠️</option><option>🚨</option><option>👶</option><option>🔔</option><option>📷</option></select></div>
+    <div class="ab-row"><label>Title</label><input id="abTitle" value="Child crossing alert" oninput="renderAlert()"></div>
+    <div class="ab-row"><label>Message</label><input id="abBody" value="A child crossed the gate outward, alone, at 4:32 PM. Tap to see the photo." oninput="renderAlert()"></div>
+    <div class="ab-row"><label>Button text</label><input id="abBtn" value="View photo" oninput="renderAlert()"></div>
+    <button class="btn orange" onclick="exportAlert()">Export alert design (JSON)</button>
+  </div>
+  <div style="flex:0 0 320px;">
+    <div class="phone"><div class="screen">
+      <div class="pnotif">
+        <div class="pn-head"><span class="pn-icon" id="pIcon" style="background:#b03a2e">⚠️</span><span>SENA · now</span></div>
+        <div class="pn-title" id="pTitle">Child crossing alert</div>
+        <div class="pn-body" id="pBody">A child crossed the gate outward, alone, at 4:32 PM. Tap to see the photo.</div>
+        <div style="margin-top:8px;"><span style="background:#16243a;color:#fff;font-size:12px;padding:5px 12px;border-radius:6px;" id="pBtn">View photo</span></div>
+      </div>
+    </div></div>
+    <p class="lede arial" style="font-size:13px;">Live preview of the alert on the parent's phone.</p>
+  </div>
+</div>
+
+<h2>Escalation matrix <span class="lede">(directors can reorder / add steps)</span></h2>
+<table id="escTable"></table>
+<button class="btn" onclick="addEscRow()">+ Add escalation step</button>
+<button class="btn orange" onclick="exportEsc()">Export escalation (JSON)</button>
+<p class="lede arial" style="font-size:13.5px;">Order and wait time are configurable per household.</p>
+
+<h2>Night escalation</h2>
+<div class="why"><b>How it works now:</b> a child-boundary event at night (e.g. 10 PM–6 AM) raises posture — notify immediately, shorter waits, all owners at once. Night changes <i>how urgently</i> we treat the event, never <i>what</i> happened.</div>
+<div class="input-point"><b>← Board input point:</b> set what counts as "night," which zones count, and how much to escalate. Capture suggestions in the scenario comment boxes for now.</div>
+
+<h2>Export / Import everything</h2>
+<p class="lede arial" style="font-size:14px;">Build scenarios in the browser, then export the JSON and paste it into the project chat. Or import a JSON file someone sent you.</p>
+<button class="btn primary" onclick="exportAll()">Export ALL scenarios + settings (JSON)</button>
+<button class="btn" onclick="document.getElementById('importArea').style.display='block'">Import JSON</button>
+<textarea class="jsonarea" id="exportArea" style="display:none;margin-top:10px;" readonly></textarea>
+<div id="importArea" style="display:none;margin-top:10px;">
+  <textarea class="jsonarea" id="importText" placeholder="Paste scenario JSON here..."></textarea>
+  <button class="btn" onclick="importJSON()">Load it</button>
+</div>
+
+<div class="nav">Demonstrator (Phase 1) — planned behaviour for discussion; not a live system. Scenario edits live in this browser session; export JSON to keep them. Priority "Removed" hides a scenario (never deletes — it can return).</div>
+
+<script>
+const PRIO=['confirmed','delayed','undecided','deferred','removed'];
+const PRIO_LABEL={confirmed:'Confirmed',delayed:'Delayed',undecided:'Not decided',deferred:'Deferred',removed:'Removed'};
+let scenarios=[
+  {name:'Child crosses alone',priority:'confirmed',comment:'',modified:today(),
+   situation:'A small child walks toward the gate and crosses it, heading OUTWARD toward the road. No adult is with them. The child keeps going.',
+   outcome:'CONFIRMED ALERT',outcomeClass:'oc-alert',
+   nodes:[{type:'start',t:'A person is detected'},{type:'decision',t:'Is it a child-sized person?',s:'YES — confident'},
+     {type:'decision',t:'Which direction?',s:'OUTWARD (crossing gate out)'},{type:'decision',t:'Is an adult crossing WITH them?',s:'NO'},
+     {type:'decision',t:'Did it really happen?',s:'Sustained, not a glitch — YES'},{type:'terminal',t:'CONFIRMED ALERT',s:'notify parent + snapshot'}],
+   why:'A child is leaving the property, outward, alone, sustained. Every condition for concern is met, so SENA alerts with full confidence. Inbound never alerts; "sustained" prevents a child stepping to the gate and back from a false alarm.',builtin:true},
+  {name:'Adult only watching',priority:'confirmed',comment:'',modified:today(),
+   situation:'A small child crosses the gate outward. An adult is present in the compound but standing back, watching — NOT crossing with the child.',
+   outcome:'ALERT',outcomeClass:'oc-alert',
+   nodes:[{type:'start',t:'A person is detected'},{type:'decision',t:'Is it a child-sized person?',s:'YES'},
+     {type:'decision',t:'Which direction?',s:'OUTWARD'},{type:'decision',t:'Is an adult crossing WITH them?',s:'Adult nearby but NOT crossing → treated as NO'},
+     {type:'terminal',t:'ALERT',s:'notify parent + snapshot'}],
+   why:'In V1 an adult cancels the alert only if actually crossing the boundary WITH the child. An adult merely watching is not confirmed supervision across the gate, so SENA errs toward alerting. (True supervision-awareness is V3.) Honest limit: V1 cannot tell a watching parent from an unrelated adult — both alert. That is the safe error.',builtin:true}
+];
+let escRows=[{who:'Owner 1 (primary)',action:'Push + snapshot + sound',wait:'30s'},
+  {who:'Owner 2 (secondary)',action:'Push + snapshot',wait:'30s'},
+  {who:'Owner 3 (emergency)',action:'Push + snapshot',wait:'local alarm continues'}];
+let activeFilters=new Set(['confirmed','delayed','undecided','deferred']);
+let current=0;
+function today(){return new Date().toISOString().slice(0,10);}
+function escapeHtml(s){return (s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+function render(){
+  const tabbar=document.getElementById('tabbar'),panels=document.getElementById('panels');
+  tabbar.innerHTML='';panels.innerHTML='';
+  scenarios.forEach((sc,i)=>{
+    const visible=activeFilters.has(sc.priority);
+    const tab=document.createElement('div');
+    tab.className='tab'+(i===current?' active':'')+(sc.priority==='removed'?' removed':'');
+    tab.style.display=visible?'':'none';
+    tab.innerHTML='<span class="pdot pd-'+sc.priority+'"></span>Scenario '+(i+1)+' · '+escapeHtml(sc.name);
+    tab.onclick=()=>{current=i;render();};
+    tabbar.appendChild(tab);
+    const p=document.createElement('div');p.className='panel'+(i===current?' active':'');
+    let flow='<div class="flow">';
+    sc.nodes.forEach((n,k)=>{if(k>0)flow+='<div class="farrow">▼</div>';
+      const cls=n.type==='terminal'?'terminal':n.type==='decision'?'decision':n.type==='start'?'start':'';
+      flow+='<div class="fnode '+cls+'"><span class="t">'+escapeHtml(n.t)+'</span>'+(n.s?'<span class="s">'+escapeHtml(n.s)+'</span>':'')+'</div>';});
+    flow+='</div>';
+    p.innerHTML='<div class="stoolbar"><span>Priority:</span><select onchange="setPrio('+i+',this.value)">'+
+      PRIO.map(pr=>'<option value="'+pr+'"'+(pr===sc.priority?' selected':'')+'>'+PRIO_LABEL[pr]+'</option>').join('')+'</select>'+
+      '<button class="btn" style="margin:0;padding:5px 10px;" onclick="exportOne('+i+')">Export this scenario (JSON)</button>'+
+      '<span class="stamp">modified '+sc.modified+(sc.builtin?' · built-in':'')+'</span></div>'+
+      '<h3>Scenario '+(i+1)+' — '+escapeHtml(sc.name)+'</h3>'+
+      '<div class="box"><b>The situation:</b> '+escapeHtml(sc.situation)+'</div>'+
+      '<p>Outcome: <span class="outcome '+sc.outcomeClass+'">→ '+escapeHtml(sc.outcome)+'</span></p>'+flow+
+      '<div class="why"><b>Why:</b> '+escapeHtml(sc.why)+'</div>'+
+      '<label class="arial" style="font-size:13px;color:#7a5a14;font-weight:bold;">Board comment (exports with the scenario):</label>'+
+      '<textarea class="commentbox" rows="2" oninput="setComment('+i+',this.value)" placeholder="Directors: add your comment / suggested change here...">'+escapeHtml(sc.comment)+'</textarea>';
+    panels.appendChild(p);
+  });
+  const bt=document.createElement('div');bt.className='tab builder'+(current===-1?' active':'');
+  bt.textContent='＋ Create new scenario';bt.onclick=()=>{current=-1;render();};
+  tabbar.appendChild(bt);
+  if(current===-1)panels.appendChild(builderPanel());
+}
+function builderPanel(){
+  const p=document.createElement('div');p.className='panel builderpanel active';
+  p.innerHTML='<h3 style="color:var(--orange)">Create a new scenario</h3>'+
+    '<p class="lede">Drag components onto the canvas, click a box to edit its text, name it, and save as a new tab. Existing scenarios are never removed — only hidden via the "Removed" priority.</p>'+
+    '<input class="namefield" id="scenName" placeholder="Name (e.g. Child crosses with the maid)">'+
+    '<div class="builder-wrap"><div class="palette"><h4>Drag a component →</h4>'+
+      '<div class="pal-item" draggable="true" data-type="start">Start / Detection</div>'+
+      '<div class="pal-item dec" draggable="true" data-type="decision">Decision / Question</div>'+
+      '<div class="pal-item" draggable="true" data-type="step">Action / Step</div>'+
+      '<div class="pal-item term" draggable="true" data-type="terminal">Outcome (Alert / No alert)</div></div>'+
+      '<div class="canvas" id="canvas" ondragover="event.preventDefault()" ondrop="dropNode(event)"><div class="canvas-empty" id="canvasEmpty">Drag components here</div></div></div>'+
+    '<div style="margin-top:12px;"><button class="btn primary" onclick="saveScenario()">Save as new scenario tab</button>'+
+    '<button class="btn" onclick="clearCanvas()">Clear canvas</button></div>';
+  setTimeout(bindPalette,0);return p;
+}
+let dragType=null;
+function bindPalette(){document.querySelectorAll('.pal-item').forEach(el=>el.addEventListener('dragstart',()=>dragType=el.dataset.type));}
+const labels={start:'Start / Detection',decision:'Decision / Question',step:'Action / Step',terminal:'Outcome (Alert / No alert)'};
+function dropNode(e){e.preventDefault();if(!dragType)return;const c=document.getElementById('canvas'),em=document.getElementById('canvasEmpty');if(em)em.remove();
+  if(c.querySelector('.cnode')){const a=document.createElement('div');a.className='cn-arrow';a.textContent='▼';c.appendChild(a);}
+  const n=document.createElement('div');n.className='cnode'+(dragType==='decision'?' dec':dragType==='terminal'?' term':'');n.dataset.type=dragType;
+  const ta=document.createElement('textarea');ta.rows=2;ta.value=labels[dragType];
+  const d=document.createElement('button');d.className='del';d.textContent='×';d.onclick=()=>{const a=n.previousElementSibling;if(a&&a.classList.contains('cn-arrow'))a.remove();n.remove();};
+  n.appendChild(d);n.appendChild(ta);c.appendChild(n);dragType=null;}
+function clearCanvas(){document.getElementById('canvas').innerHTML='<div class="canvas-empty" id="canvasEmpty">Drag components here</div>';}
+function saveScenario(){
+  const name=(document.getElementById('scenName').value||'Untitled').trim();
+  const cnodes=[...document.querySelectorAll('#canvas .cnode')];
+  if(!cnodes.length){alert('Add at least one component first.');return;}
+  const nodes=cnodes.map(n=>({type:n.dataset.type,t:n.querySelector('textarea').value}));
+  scenarios.push({name,priority:'undecided',comment:'',modified:today(),
+    situation:'(Board-defined — describe the situation in the comment.)',
+    outcome:(nodes.find(n=>n.type==='terminal')||{}).t||'(set outcome)',outcomeClass:'oc-alert',
+    nodes,why:'Board-defined scenario built during the session. To be reviewed against the Safety Constitution before becoming product behaviour.',builtin:false});
+  current=scenarios.length-1;render();
+  alert('Scenario "'+name+'" added. Existing scenarios remain — none removed.');
+}
+function setPrio(i,v){scenarios[i].priority=v;scenarios[i].modified=today();render();}
+function setComment(i,v){scenarios[i].comment=v;scenarios[i].modified=today();}
+function toggleFilter(el){const f=el.dataset.f;if(activeFilters.has(f)){activeFilters.delete(f);el.classList.remove('on');}else{activeFilters.add(f);el.classList.add('on');}render();}
+function renderEsc(){const t=document.getElementById('escTable');
+  t.innerHTML='<tr><th>Order</th><th>Who</th><th>Action</th><th>Wait before next</th><th></th></tr>'+
+  escRows.map((r,i)=>'<tr><td>'+(i+1)+'</td>'+
+    '<td><input value="'+escapeHtml(r.who)+'" oninput="escRows['+i+'].who=this.value" style="width:95%;border:1px solid #ddd;border-radius:4px;padding:4px;"></td>'+
+    '<td><input value="'+escapeHtml(r.action)+'" oninput="escRows['+i+'].action=this.value" style="width:95%;border:1px solid #ddd;border-radius:4px;padding:4px;"></td>'+
+    '<td><input value="'+escapeHtml(r.wait)+'" oninput="escRows['+i+'].wait=this.value" style="width:90%;border:1px solid #ddd;border-radius:4px;padding:4px;"></td>'+
+    '<td>'+(i>0?'<button class="btn" style="margin:0;padding:3px 8px;" onclick="moveEsc('+i+',-1)">↑</button>':'')+
+        (i<escRows.length-1?'<button class="btn" style="margin:0;padding:3px 8px;" onclick="moveEsc('+i+',1)">↓</button>':'')+'</td></tr>').join('');}
+function addEscRow(){escRows.push({who:'New contact',action:'Push + snapshot',wait:'30s'});renderEsc();}
+function moveEsc(i,d){const j=i+d;[escRows[i],escRows[j]]=[escRows[j],escRows[i]];renderEsc();}
+function renderAlert(){const urg=document.getElementById('abUrg').value;const colors={critical:'#b03a2e',high:'#e07b1a',info:'#2d6ba0'};
+  document.getElementById('pIcon').style.background=colors[urg];document.getElementById('pIcon').textContent=document.getElementById('abIcon').value;
+  document.getElementById('pTitle').textContent=document.getElementById('abTitle').value;document.getElementById('pBody').textContent=document.getElementById('abBody').value;
+  document.getElementById('pBtn').textContent=document.getElementById('abBtn').value;}
+function alertObj(){return{urgency:document.getElementById('abUrg').value,icon:document.getElementById('abIcon').value,
+  title:document.getElementById('abTitle').value,body:document.getElementById('abBody').value,button:document.getElementById('abBtn').value};}
+function showExport(obj){const a=document.getElementById('exportArea');a.style.display='block';a.value=JSON.stringify(obj,null,2);a.scrollIntoView({behavior:'smooth'});a.select();}
+function exportOne(i){showExport({type:'sena_scenario_v1',scenario:scenarios[i]});}
+function exportAlert(){showExport({type:'sena_alert_design',alert:alertObj()});}
+function exportEsc(){showExport({type:'sena_escalation',steps:escRows});}
+function exportAll(){showExport({type:'sena_v1_full_export',exported:new Date().toISOString(),scenarios,escalation:escRows,alertDesign:alertObj()});}
+function importJSON(){try{const d=JSON.parse(document.getElementById('importText').value);
+  if(d.type==='sena_scenario_v1'&&d.scenario){scenarios.push(d.scenario);}
+  else if(d.type==='sena_v1_full_export'){if(d.scenarios)scenarios=d.scenarios;if(d.escalation)escRows=d.escalation;}
+  else{alert('Unrecognized JSON type.');return;}
+  current=0;render();renderEsc();alert('Imported.');}catch(e){alert('Could not parse JSON: '+e.message);}}
+renderEsc();renderAlert();
+
+// ============================================
+//  SUPABASE PERSISTENCE (scenarios shared + saved)
+// ============================================
+const SUPABASE_URL = "https://bzwdvdbmpurqqpntrcio.supabase.co";
+const SUPABASE_KEY = "sb_publishable_6YrFzgL6-Whlft8lofg5Nw_jxIsPz_t";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let currentUserId = null;
+const builtinScenarios = scenarios.map(s=>JSON.parse(JSON.stringify(s))); // keep the 2 built-ins
+
+async function loadFromCloud(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if(!session){ render(); return; }           // not logged in (opened directly) — just show built-ins
+  currentUserId = session.user.id;
+  const { data, error } = await sb.from('scenarios').select('*').order('created_at',{ascending:true});
+  if(error){ render(); return; }
+  if(data && data.length){
+    // built-ins first, then cloud-saved scenarios (skip dupes of built-ins by name)
+    const names = new Set(builtinScenarios.map(b=>b.name));
+    const cloud = data.filter(r=>!names.has(r.data.name)).map(r=>({ ...r.data, priority:r.priority||r.data.priority, _id:r.id }));
+    scenarios = builtinScenarios.concat(cloud);
+  }
+  render();
+}
+
+// Save a scenario to the cloud (insert new or update existing)
+async function cloudSaveScenario(sc){
+  if(!currentUserId) return;
+  try{
+    if(sc._id){
+      await sb.from('scenarios').update({ data:sc, priority:sc.priority, last_edited_by:currentUserId, updated_at:new Date().toISOString() }).eq('id', sc._id);
+      await sb.from('audit_log').insert({ user_id:currentUserId, action:'edited scenario', detail:sc.name });
+    } else {
+      const { data } = await sb.from('scenarios').insert({ data:sc, priority:sc.priority, created_by:currentUserId, last_edited_by:currentUserId }).select().single();
+      if(data) sc._id = data.id;
+      await sb.from('audit_log').insert({ user_id:currentUserId, action:'created scenario', detail:sc.name });
+    }
+  }catch(e){ console.warn('cloud save failed', e); }
+}
+
+// hook saveScenario (new) and setPrio/setComment (edits) to persist
+const _saveScenario = saveScenario;
+saveScenario = function(){
+  const before = scenarios.length;
+  _saveScenario();
+  if(scenarios.length>before){ cloudSaveScenario(scenarios[scenarios.length-1]); }
+};
+const _setPrio = setPrio;
+setPrio = function(i,v){ _setPrio(i,v); if(scenarios[i]._id||!scenarios[i].builtin) cloudSaveScenario(scenarios[i]); };
+const _setComment = setComment;
+setComment = function(i,v){ _setComment(i,v); clearTimeout(window._ct); window._ct=setTimeout(()=>{ if(scenarios[i]._id||!scenarios[i].builtin) cloudSaveScenario(scenarios[i]); },800); };
+
+loadFromCloud();
+</script>
+</body>
+</html>
