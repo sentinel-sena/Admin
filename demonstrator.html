@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SENA — Board Hub</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{ --ink:#ED6A5A; --ink-soft:#3E8E96; --orange:#3E8E96; --orange-soft:#DCE4DC;
+         --green:#3E8E96; --red:#b03a2e; --paper:#f4f7f4; --line:#c4d2cc; --base:17px; }
+  *{box-sizing:border-box;}
+  body{font-family:Georgia,"Times New Roman",serif;color:var(--ink);line-height:1.6;
+       max-width:1040px;margin:0 auto;padding:0 24px 40px;background:var(--paper);font-size:var(--base);}
+  h1{font-size:28px;margin:18px 0 2px;} h2{font-size:21px;margin-top:28px;border-bottom:3px solid var(--orange);padding-bottom:5px;}
+  .lede{color:#5a6573;font-size:16px;margin-top:4px;}
+  .arial{font-family:Arial,sans-serif;}
+  /* MENU BAR */
+  .menubar{position:sticky;top:0;background:var(--ink);margin:0 -24px 14px;padding:11px 24px;
+           display:flex;gap:6px;flex-wrap:wrap;align-items:center;z-index:10;}
+  .menubar .brand{color:#fff;font-weight:bold;font-size:19px;margin-right:14px;}
+  .menubar a{font-family:Arial,sans-serif;font-size:14px;font-weight:bold;color:#cdd8e4;text-decoration:none;
+             padding:7px 13px;border-radius:7px;}
+  .menubar a:hover{background:#22344e;color:#fff;}
+  .menubar a.active{background:var(--orange);color:#fff;}
+  .menubar a.new{background:#fff;color:var(--ink);}
+  .menubar .who{margin-left:auto;color:#9fb0c2;font-family:Arial,sans-serif;font-size:12.5px;}
+  .menubar .who a{color:#cdd8e4;padding:4px 8px;}
+  .status{display:inline-block;background:var(--green);color:#fff;font-size:13px;padding:4px 12px;border-radius:3px;font-family:Arial,sans-serif;letter-spacing:.5px;}
+  .principle{background:var(--ink);color:#eef3f6;padding:16px 20px;border-radius:6px;margin:18px 0;font-size:16px;}
+  .principle b{color:#e8a84f;}
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-family:Arial,sans-serif;font-size:14.5px;}
+  th{background:var(--ink);color:#fff;text-align:left;padding:9px 11px;} td{padding:9px 11px;border-bottom:1px solid var(--line);vertical-align:top;}
+  tr:nth-child(even) td{background:#f6f6f2;}
+  .why{background:#eef3f7;border-left:5px solid var(--ink);padding:12px 18px;margin:14px 0;border-radius:0 4px 4px 0;font-size:16px;}
+  .input-point{background:#fff8e6;border:1.5px dashed var(--orange);border-radius:6px;padding:14px 18px;margin:16px 0;font-family:Arial,sans-serif;font-size:14.5px;color:#7a5a14;}
+  .btn{font-family:Arial,sans-serif;font-size:14px;font-weight:bold;padding:9px 16px;border-radius:6px;border:2px solid var(--ink);background:#fff;color:var(--ink);cursor:pointer;margin:4px 6px 4px 0;}
+  .btn.primary{background:var(--ink);color:#fff;} .btn.orange{background:var(--orange);color:#fff;border-color:var(--orange);}
+  .adminonly{display:none;}
+  body.is-admin .adminonly{display:inline-block;}
+  .lockmsg{font-family:Arial,sans-serif;font-size:12px;color:#999;font-style:italic;}
+  /* alert designer */
+  .builder-wrap{display:flex;gap:14px;flex-wrap:wrap;}
+  .ab-row{font-family:Arial,sans-serif;font-size:14px;margin:8px 0;} .ab-row label{display:inline-block;width:120px;color:var(--ink-soft);font-weight:bold;}
+  .ab-row input,.ab-row select{font-family:Arial,sans-serif;font-size:14px;padding:6px 9px;border:1.5px solid var(--line);border-radius:5px;width:60%;}
+  .phone{width:300px;background:#0d0f14;border-radius:28px;padding:14px 12px;margin:10px 0;box-shadow:0 6px 18px rgba(0,0,0,.25);}
+  .phone .screen{background:#1c2430;border-radius:18px;min-height:140px;padding:14px;}
+  .phone .pnotif{background:#fff;border-radius:14px;padding:12px;font-family:Arial,sans-serif;}
+  .phone .pn-head{display:flex;align-items:center;gap:7px;font-size:12px;color:#888;margin-bottom:5px;}
+  .phone .pn-icon{width:22px;height:22px;border-radius:6px;display:inline-block;text-align:center;line-height:22px;color:#fff;font-size:13px;}
+  .phone .pn-title{font-weight:bold;font-size:15px;margin:2px 0;} .phone .pn-body{font-size:13px;color:#333;}
+  input.cell{width:95%;border:1px solid #ddd;border-radius:4px;padding:4px;font-family:Arial,sans-serif;}
+</style>
+</head>
+<body>
+
+<div class="menubar">
+  <span class="brand">SENA</span>
+  <a href="demonstrator.html" class="active">Home</a>
+  <a href="v1.html">V1</a>
+  <a href="v2.html">V2</a>
+  <a href="v3.html">V3</a>
+  <a href="v4.html">V4</a>
+  <a href="create.html" class="new">＋ Create New</a>
+  <span class="who" id="who"></span>
+</div>
+
+<span class="status">🟢 SENA BOARD HUB</span>
+<h1>Board Hub — common information</h1>
+<p class="lede">Shared information that applies to all versions. Scenarios live on their version pages (V1–V4). Build new scenarios on the Create page and tag them to a version. <span class="adminonly" style="color:var(--orange);font-weight:bold;">You are admin — common info below is editable and saves to the database.</span></p>
+
+<div class="principle"><b>The safety principle behind every decision:</b> SENA is an extra vigilant eye that errs toward alerting. Every real event reaches the parent — never silently ignored. When unsure, it alerts anyway. A false alarm is a minor annoyance; a missed child is not acceptable.</div>
+
+<h2>Alert types</h2>
+<table>
+<tr><th>Alert type</th><th>When it fires</th><th>Parent gets</th></tr>
+<tr><td style="color:var(--red);font-weight:bold;">Confirmed alert</td><td>Confident child, crossing out, unaccompanied, sustained.</td><td>Full notification + snapshot.</td></tr>
+<tr><td style="color:var(--orange);font-weight:bold;">Fail-safe alert</td><td>Not sure it's a child but a small person crossing out unaccompanied.</td><td>Full notification + snapshot — alerts anyway.</td></tr>
+<tr><td style="color:#5a6573;font-weight:bold;">No alert (monitor)</td><td>Inside not crossing; adult crossing with them; or inbound.</td><td>No interruption; event recorded &amp; viewable.</td></tr>
+</table>
+
+<h2>Alert content designer <span class="lede">(directors decide what the alert looks like) <span class="lockmsg adminonly" style="display:none;"></span></span></h2>
+<div class="builder-wrap">
+  <div style="flex:1;min-width:280px;">
+    <div class="ab-row"><label>Urgency</label>
+      <select id="abUrg" onchange="renderAlert()">
+        <option value="critical">Critical (red, sound)</option>
+        <option value="high">High (orange)</option>
+        <option value="info">Info (blue, quiet)</option>
+      </select></div>
+    <div class="ab-row"><label>Icon</label>
+      <select id="abIcon" onchange="renderAlert()"><option>⚠️</option><option>🚨</option><option>👶</option><option>🔔</option><option>📷</option></select></div>
+    <div class="ab-row"><label>Title</label><input id="abTitle" value="Child crossing alert" oninput="renderAlert()"></div>
+    <div class="ab-row"><label>Message</label><input id="abBody" value="A child crossed the gate outward, alone, at 4:32 PM. Tap to see the photo." oninput="renderAlert()"></div>
+    <div class="ab-row"><label>Button text</label><input id="abBtn" value="View photo" oninput="renderAlert()"></div>
+    <button class="btn orange adminonly" onclick="saveCommon()">Save (admin)</button>
+    <span class="lockmsg" id="alertLock">Sign in as admin to edit &amp; save. Directors see the current design.</span>
+  </div>
+  <div style="flex:0 0 320px;">
+    <div class="phone"><div class="screen">
+      <div class="pnotif">
+        <div class="pn-head"><span class="pn-icon" id="pIcon" style="background:#b03a2e">⚠️</span><span>SENA · now</span></div>
+        <div class="pn-title" id="pTitle">Child crossing alert</div>
+        <div class="pn-body" id="pBody">A child crossed the gate outward, alone, at 4:32 PM. Tap to see the photo.</div>
+        <div style="margin-top:8px;"><span style="background:#16243a;color:#fff;font-size:12px;padding:5px 12px;border-radius:6px;" id="pBtn">View photo</span></div>
+      </div>
+    </div></div>
+  </div>
+</div>
+
+<h2>Escalation matrix</h2>
+<table id="escTable"></table>
+<button class="btn adminonly" onclick="addEscRow()">+ Add step</button>
+<button class="btn orange adminonly" onclick="saveCommon()">Save (admin)</button>
+<span class="lockmsg" id="escLock">Sign in as admin to edit. Directors see the current matrix.</span>
+
+<h2>Night escalation</h2>
+<div class="why"><b>How it works now:</b> a child-boundary event at night (e.g. 10 PM–6 AM) raises posture — notify immediately, shorter waits, all owners at once. Night changes <i>how urgently</i> we treat the event, never <i>what</i> happened.</div>
+<div class="input-point"><b>Board input:</b> set what counts as "night," which zones count, and how much to escalate. Discuss in scenario comments on the version pages.</div>
+
+<script>
+const SUPABASE_URL="https://bzwdvdbmpurqqpntrcio.supabase.co";
+const SUPABASE_KEY="sb_publishable_6YrFzgL6-Whlft8lofg5Nw_jxIsPz_t";
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+let isAdmin=false;
+function getDeviceToken(){let t=localStorage.getItem('sena_device_token');if(!t){t='dev_'+crypto.randomUUID();localStorage.setItem('sena_device_token',t);}return t;}
+function bounce(msg){document.body.innerHTML='<div style="font-family:Arial;max-width:520px;margin:80px auto;padding:30px;background:#fdf0ee;border:2px solid #b03a2e;border-radius:12px;color:#8a2a1c;text-align:center;"><h2>🚫 Sign-in required</h2><p>'+msg+'</p><a href="index.html" style="display:inline-block;margin-top:10px;background:#16243a;color:#fff;padding:11px 22px;border-radius:8px;text-decoration:none;font-weight:bold;">Go to sign in</a></div>';}
+
+let escRows=[{who:'Owner 1 (primary)',action:'Push + snapshot + sound',wait:'30s'},
+  {who:'Owner 2 (secondary)',action:'Push + snapshot',wait:'30s'},
+  {who:'Owner 3 (emergency)',action:'Push + snapshot',wait:'local alarm continues'}];
+
+async function guard(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if(!session){ bounce('You are not signed in.'); return false; }
+  const myTok=getDeviceToken();
+  let prof;
+  try{ const r=await sb.from('profiles').select('approved,is_admin,bound_device_id,email').eq('id',session.user.id).single(); prof=r.data; }
+  catch(e){ bounce('Could not verify your account.'); return false; }
+  if(!prof||!prof.approved){ bounce('Your access is not approved. Contact the admin.'); return false; }
+  if(prof.bound_device_id && prof.bound_device_id!==myTok){ await sb.auth.signOut(); bounce('This account is locked to another browser/device. Sign in on your registered browser, or contact the admin.'); return false; }
+  isAdmin=!!prof.is_admin;
+  document.getElementById('who').innerHTML=prof.email+(isAdmin?' · ADMIN':'')+' &nbsp;<a href="#" onclick="signOut()">sign out</a>';
+  if(isAdmin) document.body.classList.add('is-admin');
+  return true;
+}
+async function signOut(){ await sb.auth.signOut(); location.href='index.html'; }
+
+// ---- COMMON INFO (alert design + escalation) load/save from DB ----
+async function loadCommon(){
+  try{
+    const { data } = await sb.from('common_config').select('*').eq('id','board').single();
+    if(data && data.config){
+      const c=data.config;
+      if(c.alert){ abUrg.value=c.alert.urgency||'critical'; abIcon.value=c.alert.icon||'⚠️'; abTitle.value=c.alert.title||''; abBody.value=c.alert.body||''; abBtn.value=c.alert.button||''; }
+      if(c.escalation && c.escalation.length) escRows=c.escalation;
+    }
+  }catch(e){ /* no row yet — use defaults */ }
+  renderAlert(); renderEsc();
+}
+async function saveCommon(){
+  if(!isAdmin){ alert('Only the admin can save common info.'); return; }
+  const config={ alert:alertObj(), escalation:escRows };
+  const { error } = await sb.from('common_config').upsert({ id:'board', config });
+  alert(error? 'Save failed: '+error.message : 'Saved.');
+}
+function alertObj(){return{urgency:abUrg.value,icon:abIcon.value,title:abTitle.value,body:abBody.value,button:abBtn.value};}
+function renderAlert(){const colors={critical:'#b03a2e',high:'#e07b1a',info:'#2d6ba0'};
+  pIcon.style.background=colors[abUrg.value]; pIcon.textContent=abIcon.value;
+  pTitle.textContent=abTitle.value; pBody.textContent=abBody.value; pBtn.textContent=abBtn.value;}
+function renderEsc(){const t=document.getElementById('escTable');
+  t.innerHTML='<tr><th>Order</th><th>Who</th><th>Action</th><th>Wait</th><th></th></tr>'+
+  escRows.map((r,i)=>'<tr><td>'+(i+1)+'</td>'+
+    '<td><input class="cell" value="'+(r.who||'')+'" oninput="escRows['+i+'].who=this.value" '+(isAdmin?'':'disabled')+'></td>'+
+    '<td><input class="cell" value="'+(r.action||'')+'" oninput="escRows['+i+'].action=this.value" '+(isAdmin?'':'disabled')+'></td>'+
+    '<td><input class="cell" value="'+(r.wait||'')+'" oninput="escRows['+i+'].wait=this.value" '+(isAdmin?'':'disabled')+'></td>'+
+    '<td>'+(isAdmin&&i>0?'<button class="btn" style="margin:0;padding:3px 8px;" onclick="moveEsc('+i+',-1)">↑</button>':'')+
+    (isAdmin&&i<escRows.length-1?'<button class="btn" style="margin:0;padding:3px 8px;" onclick="moveEsc('+i+',1)">↓</button>':'')+'</td></tr>').join('');}
+function addEscRow(){escRows.push({who:'New contact',action:'Push + snapshot',wait:'30s'});renderEsc();}
+function moveEsc(i,d){const j=i+d;[escRows[i],escRows[j]]=[escRows[j],escRows[i]];renderEsc();}
+
+(async()=>{ if(await guard()){ await loadCommon(); if(!isAdmin){ document.getElementById('alertLock').style.display='inline'; document.getElementById('escLock').style.display='inline'; } } })();
+</script>
+</body>
+</html>

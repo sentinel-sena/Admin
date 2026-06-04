@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SENA Board — Sign In</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{ --ink:#ED6A5A; --orange:#3E8E96; --green:#3E8E96; --red:#b03a2e; --paper:#f4f7f4; --line:#c4d2cc; }
+  *{box-sizing:border-box;}
+  body{font-family:Georgia,"Times New Roman",serif;background:var(--ink);color:#1a2332;margin:0;
+       min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .card{background:var(--paper);border-radius:14px;max-width:440px;width:100%;padding:34px 32px;
+        box-shadow:0 12px 40px rgba(0,0,0,.35);}
+  .brand{font-size:34px;font-weight:bold;color:var(--ink);letter-spacing:-0.5px;}
+  .sub{color:#5a6573;font-size:15px;margin:4px 0 22px;}
+  .status-pill{display:inline-block;background:var(--green);color:#fff;font-size:12px;padding:3px 10px;
+               border-radius:3px;font-family:Arial,sans-serif;letter-spacing:.5px;margin-bottom:14px;}
+  label{font-family:Arial,sans-serif;font-size:13px;font-weight:bold;color:var(--ink);display:block;margin-bottom:5px;}
+  input{width:100%;font-family:Arial,sans-serif;font-size:15px;padding:11px 13px;border:1.5px solid var(--line);
+        border-radius:8px;margin-bottom:16px;}
+  button{width:100%;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;padding:12px;border:none;
+         border-radius:8px;background:var(--ink);color:#fff;cursor:pointer;}
+  button:hover{background:#22344e;}
+  .link{font-family:Arial,sans-serif;font-size:13px;color:var(--ink);text-align:center;margin-top:14px;cursor:pointer;text-decoration:underline;}
+  .msg{font-family:Arial,sans-serif;font-size:14px;border-radius:8px;padding:12px 14px;margin-top:16px;line-height:1.5;}
+  .msg.info{background:#eef3f7;color:var(--ink);border-left:4px solid var(--ink);}
+  .msg.ok{background:#eef7ee;color:#1f5a1f;border-left:4px solid var(--green);}
+  .msg.err{background:#fdf0ee;color:#8a2a1c;border-left:4px solid var(--red);}
+  .msg.pending{background:#fff8e6;color:#7a5a14;border-left:4px solid var(--orange);}
+  .foot{font-family:Arial,sans-serif;font-size:12px;color:#999;margin-top:22px;text-align:center;line-height:1.5;}
+  .spin{display:inline-block;width:14px;height:14px;border:2px solid #fff;border-top-color:transparent;
+        border-radius:50%;animation:s .7s linear infinite;vertical-align:middle;margin-right:7px;}
+  @keyframes s{to{transform:rotate(360deg);}}
+  .hidden{display:none;}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="status-pill">🔒 SENA BOARD — PRIVATE</div>
+  <div class="brand">SENA</div>
+  <div class="sub">Board scenario tool — sign in to continue. Access is restricted to approved directors.</div>
+
+  <div id="loginView">
+    <label for="email">Email</label>
+    <input type="email" id="email" placeholder="you@example.com" autocomplete="email">
+    <label for="password">Password</label>
+    <input type="password" id="password" placeholder="Your password" autocomplete="current-password">
+    <button id="signinBtn" onclick="signIn()">Sign in</button>
+    <div class="link" onclick="toggleChange()">Change my password</div>
+    <div class="msg info">Use the email and password given to you by the SENA admin. Your account locks to the browser you first sign in from. Use a normal Chrome window (not Incognito).</div>
+  </div>
+
+  <div id="changeView" class="hidden">
+    <label for="newpass">New password</label>
+    <input type="password" id="newpass" placeholder="Choose a new password (min 8 chars)">
+    <button onclick="changePassword()">Update password</button>
+    <div class="link" onclick="toggleChange()">Back to sign in</div>
+    <div class="msg info">You must be signed in to change your password. Sign in first, then change it here.</div>
+  </div>
+
+  <div id="statusView" class="hidden"></div>
+
+  <div class="foot">
+    Private tool. If you were not invited by the SENA admin, you will not be granted access.<br>
+    Trouble signing in, or need to switch your device? Contact the admin.
+  </div>
+</div>
+
+<script>
+// ============================================
+//  CONFIG — your Supabase project
+// ============================================
+const SUPABASE_URL = "https://bzwdvdbmpurqqpntrcio.supabase.co";
+const SUPABASE_KEY = "sb_publishable_6YrFzgL6-Whlft8lofg5Nw_jxIsPz_t";
+const APP_PAGE = "demonstrator.html";
+// ============================================
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+function show(html, cls){
+  document.getElementById('loginView').classList.add('hidden');
+  document.getElementById('changeView').classList.add('hidden');
+  const v=document.getElementById('statusView'); v.classList.remove('hidden');
+  v.innerHTML='<div class="msg '+cls+'">'+html+'</div>';
+}
+function toggleChange(){
+  document.getElementById('loginView').classList.toggle('hidden');
+  document.getElementById('changeView').classList.toggle('hidden');
+}
+function getDeviceToken(){
+  let t = localStorage.getItem('sena_device_token');
+  if(!t){ t='dev_'+crypto.randomUUID(); localStorage.setItem('sena_device_token', t); }
+  return t;
+}
+async function logAudit(userId, action, detail){
+  try{ await sb.from('audit_log').insert({ user_id:userId, action, detail }); }catch(e){}
+}
+
+async function signIn(){
+  const email=document.getElementById('email').value.trim().toLowerCase();
+  const password=document.getElementById('password').value;
+  if(!email||!password){ alert('Enter email and password.'); return; }
+  const btn=document.getElementById('signinBtn'); btn.disabled=true; btn.innerHTML='<span class="spin"></span>Signing in...';
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  if(error){ show('Sign-in failed: '+error.message+'<br><br><a href="#" onclick="location.reload()">Try again</a>','err'); return; }
+  await afterAuth();
+}
+
+async function afterAuth(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if(!session){ show('No session. <a href="#" onclick="location.reload()">Try again</a>','err'); return; }
+  const user=session.user; const deviceToken=getDeviceToken();
+  let { data:profile, error } = await sb.from('profiles').select('*').eq('id', user.id).single();
+  if(error||!profile){ show('Signing you in…','info'); return; }
+
+  if(!profile.approved){
+    await logAudit(user.id,'login attempt (pending)',user.email);
+    show('⏳ <b>Your access is pending approval.</b><br><br>The SENA admin will verify and approve your account.<br><br><a href="#" onclick="signOut()">Sign out</a>','pending'); return;
+  }
+  if(!profile.bound_device_id){
+    await sb.from('profiles').update({ bound_device_id:deviceToken }).eq('id', user.id);
+    await logAudit(user.id,'device bound',deviceToken.slice(0,16));
+  } else if(profile.bound_device_id!==deviceToken){
+    await logAudit(user.id,'BLOCKED wrong device',user.email);
+    show('🚫 <b>This account is locked to another browser/device.</b><br><br>Each account works from one browser only. To switch, contact the SENA admin to reset your device.<br><br><a href="#" onclick="signOut()">Sign out</a>','err'); return;
+  }
+  await logAudit(user.id,'login success',user.email);
+  show('✅ Welcome, '+user.email+'. Opening the board tool…','ok');
+  setTimeout(()=>{ window.location.href=APP_PAGE; }, 800);
+}
+
+async function changePassword(){
+  const np=document.getElementById('newpass').value;
+  if(!np||np.length<8){ alert('Password must be at least 8 characters.'); return; }
+  const { data:{ session } } = await sb.auth.getSession();
+  if(!session){ alert('Sign in first, then change your password.'); return; }
+  const { error } = await sb.auth.updateUser({ password: np });
+  if(error){ show('Could not change password: '+error.message,'err'); return; }
+  show('✅ Password updated. <a href="#" onclick="location.reload()">Continue</a>','ok');
+}
+
+async function signOut(){ await sb.auth.signOut(); location.reload(); }
+
+// On load: if already signed in (session persists across Chrome windows), go straight through
+(async ()=>{ const { data:{ session } } = await sb.auth.getSession(); if(session) afterAuth(); })();
+</script>
+</body>
+</html>

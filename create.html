@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SENA — Create New Scenario</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{ --ink:#ED6A5A; --ink-soft:#3E8E96; --orange:#3E8E96; --orange-soft:#DCE4DC; --orange-line:#3E8E96; --green:#3E8E96; --red:#b03a2e; --paper:#f4f7f4; --line:#c4d2cc; --base:17px; }
+  *{box-sizing:border-box;}
+  body{font-family:Georgia,"Times New Roman",serif;color:var(--ink);line-height:1.6;max-width:1040px;margin:0 auto;padding:0 24px 40px;background:var(--paper);font-size:var(--base);}
+  h1{font-size:28px;margin:18px 0 2px;color:var(--orange);} h3{font-size:17px;color:var(--ink-soft);}
+  .lede{color:#5a6573;font-size:16px;margin-top:4px;}
+  .menubar{position:sticky;top:0;background:var(--ink);margin:0 -24px 14px;padding:11px 24px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;z-index:10;}
+  .menubar .brand{color:#fff;font-weight:bold;font-size:19px;margin-right:14px;}
+  .menubar a{font-family:Arial,sans-serif;font-size:14px;font-weight:bold;color:#cdd8e4;text-decoration:none;padding:7px 13px;border-radius:7px;}
+  .menubar a:hover{background:#22344e;color:#fff;} .menubar a.new{background:var(--orange);color:#fff;}
+  .menubar .who{margin-left:auto;color:#9fb0c2;font-family:Arial,sans-serif;font-size:12.5px;} .menubar .who a{color:#cdd8e4;}
+  .row{font-family:Arial,sans-serif;font-size:14px;margin:10px 0;}
+  .row label{display:inline-block;width:130px;font-weight:bold;color:var(--ink-soft);vertical-align:top;}
+  .row input,.row select,.row textarea{font-family:Arial,sans-serif;font-size:14px;padding:7px 10px;border:1.5px solid var(--line);border-radius:6px;}
+  .row input,.row textarea{width:62%;} .namef{width:62%;}
+  .builder-wrap{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;}
+  .palette{flex:0 0 200px;background:#f6f3ea;border:2px solid var(--line);border-radius:8px;padding:12px;}
+  .palette h4{margin:4px 0 10px;font-family:Arial,sans-serif;font-size:14px;}
+  .pal-item{background:var(--orange-soft);border:2px solid var(--orange);border-radius:6px;padding:8px 10px;margin:7px 0;font-family:Arial,sans-serif;font-size:13.5px;font-weight:bold;color:var(--ink);cursor:grab;text-align:center;}
+  .pal-item.dec{background:#fff6e9;border-style:dashed;} .pal-item.term{background:#fbe4df;border-color:var(--red);color:var(--red);}
+  .canvas{flex:1;min-width:320px;min-height:340px;background:#fffdf8;border:2px dashed var(--orange);border-radius:8px;padding:14px;}
+  .canvas-empty{color:#b0a98f;font-family:Arial,sans-serif;text-align:center;margin-top:40px;font-size:15px;}
+  .cnode{background:var(--orange-soft);border:2.5px solid var(--orange);border-radius:8px;padding:8px 12px;margin:8px auto;max-width:440px;position:relative;}
+  .cnode.dec{background:#fff6e9;border-style:dashed;} .cnode.term{background:#fbe4df;border-color:var(--red);}
+  .cnode textarea{width:100%;border:none;background:transparent;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;color:var(--ink);text-align:center;resize:vertical;}
+  .cnode.term textarea{color:var(--red);}
+  .cnode .del{position:absolute;top:-9px;right:-9px;background:var(--red);color:#fff;border:none;border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:14px;line-height:1;}
+  .cn-arrow{text-align:center;color:var(--orange-line);font-weight:bold;font-size:22px;}
+  .btn{font-family:Arial,sans-serif;font-size:14px;font-weight:bold;padding:9px 16px;border-radius:6px;border:2px solid var(--ink);background:#fff;color:var(--ink);cursor:pointer;margin:4px 6px 4px 0;}
+  .btn.primary{background:var(--ink);color:#fff;} .btn.orange{background:var(--orange);color:#fff;border-color:var(--orange);}
+  textarea.jsonarea{width:100%;height:120px;font-family:"Courier New",monospace;font-size:12.5px;border:1.5px solid var(--line);border-radius:6px;padding:10px;}
+  .sect{background:#fff;border:1px solid var(--line);border-radius:8px;padding:16px 18px;margin:16px 0;}
+  .preview .farrow{text-align:center;color:var(--orange-line);font-weight:bold;font-size:20px;}
+  .fnode{display:block;max-width:480px;margin:6px auto;background:var(--orange-soft);border:2.5px solid var(--orange);border-radius:8px;padding:9px 14px;font-family:Arial,sans-serif;text-align:center;}
+  .fnode .t{color:var(--ink);font-weight:bold;font-size:15px;} .fnode.start{background:var(--ink);} .fnode.start .t{color:#fff;}
+  .fnode.decision{background:#fff6e9;border-style:dashed;} .fnode.terminal{background:#fbe4df;border-color:var(--red);} .fnode.terminal .t{color:var(--red);}
+</style>
+</head>
+<body>
+
+<div class="menubar">
+  <span class="brand">SENA</span>
+  <a href="demonstrator.html">Home</a><a href="v1.html">V1</a><a href="v2.html">V2</a><a href="v3.html">V3</a><a href="v4.html">V4</a>
+  <a href="create.html" class="new">＋ Create New</a>
+  <span class="who" id="who"></span>
+</div>
+
+<h1>Create New Scenario</h1>
+<p class="lede">Build a scenario by dragging components, or upload a JSON to render it as a diagram. Tag it to a version (V1–V4) and set its status. On save it appears on that version's page. Existing scenarios are never deleted — only hidden via "Removed".</p>
+
+<div class="sect">
+  <div class="row"><label>Scenario name</label><input class="namef" id="scenName" placeholder="e.g. Child crosses with the maid"></div>
+  <div class="row"><label>Situation</label><textarea id="scenSit" rows="2" placeholder="Describe the situation"></textarea></div>
+  <div class="row"><label>Assign to version</label>
+    <select id="scenVer"><option value="v1">V1 — Child Safety</option><option value="v2">V2 — Talking SENA</option><option value="v3">V3 — Supervision</option><option value="v4">V4 — Identity</option></select></div>
+  <div class="row"><label>Status</label>
+    <select id="scenPrio"><option value="undecided">Not decided</option><option value="delayed">Delayed</option><option value="deferred">Deferred</option><option value="confirmed">Confirmed (admin only)</option><option value="removed">Removed (hidden)</option></select></div>
+  <div class="row"><label>Outcome</label><input id="scenOut" placeholder="e.g. CONFIRMED ALERT"></div>
+  <div class="row"><label>Why (reasoning)</label><textarea id="scenWhy" rows="2" placeholder="Why this outcome"></textarea></div>
+</div>
+
+<div class="sect">
+  <h3>Build the flow (drag components, click to edit text)</h3>
+  <div class="builder-wrap">
+    <div class="palette"><h4>Drag →</h4>
+      <div class="pal-item" draggable="true" data-type="start">Start / Detection</div>
+      <div class="pal-item dec" draggable="true" data-type="decision">Decision / Question</div>
+      <div class="pal-item" draggable="true" data-type="step">Action / Step</div>
+      <div class="pal-item term" draggable="true" data-type="terminal">Outcome</div>
+    </div>
+    <div class="canvas" id="canvas" ondragover="event.preventDefault()" ondrop="drop(event)"><div class="canvas-empty" id="cempty">Drag components here</div></div>
+  </div>
+</div>
+
+<div class="sect">
+  <h3>Or: upload JSON → render as diagram</h3>
+  <input type="file" id="jsonFile" accept="application/json,.json" onchange="uploadJson(event)">
+  <button class="btn" onclick="document.getElementById('pasteWrap').style.display='block'">Or paste JSON</button>
+  <div id="pasteWrap" style="display:none;margin-top:10px;">
+    <textarea class="jsonarea" id="pasteJson" placeholder="Paste scenario JSON here..."></textarea>
+    <button class="btn" onclick="loadPasted()">Render this JSON</button>
+  </div>
+  <div class="preview" id="preview" style="margin-top:14px;"></div>
+</div>
+
+<div class="sect">
+  <button class="btn primary" onclick="saveScenario()">Save scenario to its version page</button>
+  <button class="btn orange" onclick="exportJson()">Export diagram → JSON</button>
+  <button class="btn" onclick="clearAll()">Clear</button>
+  <textarea class="jsonarea" id="exportArea" style="display:none;margin-top:10px;" readonly></textarea>
+</div>
+
+<script>
+const SUPABASE_URL="https://bzwdvdbmpurqqpntrcio.supabase.co";
+const SUPABASE_KEY="sb_publishable_6YrFzgL6-Whlft8lofg5Nw_jxIsPz_t";
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+let isAdmin=false,currentUserId=null;
+// ===== Path 1 branching tree renderer (returns SVG string) =====
+const NW=190, NH=64, VGAP=58;
+function _measure(node){
+  if(!node) return 0;
+  node._kids=[];
+  if(node.type==='decision'){ if(node.yes)node._kids.push(['yes',node.yes]); if(node.no)node._kids.push(['no',node.no]); }
+  else if(node.next){ node._kids.push([null,node.next]); }
+  if(node._kids.length===0){ node._w=NW+34; return node._w; }
+  let w=0; node._kids.forEach(([,k])=>w+=_measure(k));
+  node._w=Math.max(NW+34,w); return node._w;
+}
+function _place(node,xLeft,depth,acc){
+  node._cx=xLeft+node._w/2; node._cy=20+depth*(NH+VGAP); acc.push(node);
+  let cx=xLeft; node._kids.forEach(([b,k])=>{ k._branch=b; _place(k,cx,depth+1,acc); cx+=k._w; });
+}
+function treeSVG(root){
+  if(!root||!root.type) return '<p style="font-family:Arial;color:#888">No diagram.</p>';
+  const E=s=>(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  _measure(root); const nodes=[]; _place(root,0,0,nodes);
+  const totalW=root._w+20; let md=0; nodes.forEach(n=>{const d=Math.round((n._cy-20)/(NH+VGAP));if(d>md)md=d;});
+  const totalH=40+(md+1)*(NH+VGAP);
+  let svg='<svg viewBox="0 0 '+totalW+' '+totalH+'" width="100%" style="min-width:'+Math.min(totalW,1600)+'px" xmlns="http://www.w3.org/2000/svg" font-family="Arial">';
+  svg+='<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1 L9 5 L1 9" fill="none" stroke="#3E8E96" stroke-width="1.7"/></marker></defs>';
+  nodes.forEach(n=>{(n._kids||[]).forEach(([b,k])=>{
+    const x1=n._cx,y1=n._cy+NH/2,x2=k._cx,y2=k._cy-NH/2,midY=(y1+y2)/2;
+    svg+='<path d="M'+x1+','+y1+' L'+x1+','+midY+' L'+x2+','+midY+' L'+x2+','+y2+'" fill="none" stroke="#3E8E96" stroke-width="1.8" marker-end="url(#ah)"/>';
+    if(b){ const lbl=b==='yes'?(n.yesLabel||'YES'):(n.noLabel||'NO');
+      svg+='<rect x="'+(x1+(x2>x1?6:-46))+'" y="'+(midY-9)+'" width="40" height="16" rx="3" fill="#F3EAA0"/>'+
+      '<text x="'+(x1+(x2>x1?26:-26))+'" y="'+(midY+3)+'" text-anchor="middle" font-size="11" font-weight="bold" fill="#7a6a1a">'+E(lbl)+'</text>'; }
+  });});
+  nodes.forEach(n=>{
+    const x=n._cx-NW/2,y=n._cy-NH/2;
+    const isStart=n.type==='start',isTerm=n.type==='terminal',isDec=n.type==='decision',isAlert=n.alert;
+    let fill,stroke,tcol;
+    if(isStart){fill='#3E8E96';stroke='#2f6e74';tcol='#fff';}
+    else if(isTerm){fill=isAlert?'#ED6A5A':'#DCE4DC';stroke=isAlert?'#c94e3f':'#9fb0a6';tcol=isAlert?'#fff':'#2b3a3a';}
+    else if(isDec){fill='#fff';stroke='#3E8E96';tcol='#2b3a3a';}
+    else {fill='#A8CFC9';stroke='#3E8E96';tcol='#2b3a3a';}
+    const rx=(isStart||isTerm)?NH/2:8;
+    svg+='<rect x="'+x+'" y="'+y+'" width="'+NW+'" height="'+NH+'" rx="'+rx+'" fill="'+fill+'" stroke="'+stroke+'" stroke-width="2.5"/>';
+    if(isDec){const dx=x+12,dy=y+12,s=7;svg+='<polygon points="'+dx+','+(dy-s)+' '+(dx+s)+','+dy+' '+dx+','+(dy+s)+' '+(dx-s)+','+dy+'" fill="#3E8E96"/>';}
+    const words=(n.t||'').split(/\s+/);const lines=[];let cur='';
+    words.forEach(w=>{if((cur+' '+w).trim().length>26){if(cur)lines.push(cur);cur=w;}else cur=(cur+' '+w).trim();});if(cur)lines.push(cur);
+    const ls=lines.slice(0,3),sy=n._cy-((ls.length-1)*8);
+    ls.forEach((ln,i)=>svg+='<text x="'+n._cx+'" y="'+(sy+i*16+5)+'" text-anchor="middle" font-size="13" font-weight="bold" fill="'+tcol+'">'+E(ln)+'</text>');
+  });
+  return svg+'</svg>';
+}
+
+function linearToTree(nodes){
+  if(!nodes||!nodes.length) return null;
+  // chain linear nodes via .next; decisions in linear data just continue (no real branch)
+  let root=null,prev=null;
+  nodes.forEach(n=>{ const node={type:n.type||'step',t:n.t,_s:n.s};
+    if(n.s) node.yesLabel=n.s;
+    if(!root){root=node;} else { prev.next=node; }
+    prev=node; });
+  return root;
+}
+
+
+function getTok(){let t=localStorage.getItem('sena_device_token');if(!t){t='dev_'+crypto.randomUUID();localStorage.setItem('sena_device_token',t);}return t;}
+function bounce(m){document.body.innerHTML='<div style="font-family:Arial;max-width:520px;margin:80px auto;padding:30px;background:#fdf0ee;border:2px solid #b03a2e;border-radius:12px;color:#8a2a1c;text-align:center;"><h2>🚫 Sign-in required</h2><p>'+m+'</p><a href="index.html" style="display:inline-block;margin-top:10px;background:#16243a;color:#fff;padding:11px 22px;border-radius:8px;text-decoration:none;font-weight:bold;">Go to sign in</a></div>';}
+function esc(s){return (s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+async function guard(){
+  const { data:{ session } }=await sb.auth.getSession();
+  if(!session){ bounce('You are not signed in.'); return false; }
+  currentUserId=session.user.id; const myTok=getTok(); let prof;
+  try{ const r=await sb.from('profiles').select('approved,is_admin,bound_device_id,email').eq('id',currentUserId).single(); prof=r.data; }
+  catch(e){ bounce('Could not verify your account.'); return false; }
+  if(!prof||!prof.approved){ bounce('Your access is not approved.'); return false; }
+  if(prof.bound_device_id && prof.bound_device_id!==myTok){ await sb.auth.signOut(); bounce('This account is locked to another browser/device.'); return false; }
+  isAdmin=!!prof.is_admin;
+  document.getElementById('who').innerHTML=prof.email+(isAdmin?' · ADMIN':'')+' &nbsp;<a href="#" onclick="so()">sign out</a>';
+  return true;
+}
+async function so(){ await sb.auth.signOut(); location.href='index.html'; }
+
+// ---- drag builder ----
+let dragType=null;
+document.querySelectorAll('.pal-item').forEach(el=>el.addEventListener('dragstart',()=>dragType=el.dataset.type));
+const labels={start:'Start / Detection',decision:'Decision / Question',step:'Action / Step',terminal:'Outcome'};
+function drop(e){e.preventDefault();if(!dragType)return;const c=document.getElementById('canvas'),em=document.getElementById('cempty');if(em)em.remove();
+  if(c.querySelector('.cnode')){const a=document.createElement('div');a.className='cn-arrow';a.textContent='▼';c.appendChild(a);}
+  addNode(dragType,labels[dragType]);dragType=null;}
+function addNode(type,text,sub){const c=document.getElementById('canvas');
+  const n=document.createElement('div');n.className='cnode'+(type==='decision'?' dec':type==='terminal'?' term':'');n.dataset.type=type;
+  const ta=document.createElement('textarea');ta.rows=2;ta.value=text||'';ta.className='nt';
+  const sb2=document.createElement('input');sb2.className='ns';sb2.placeholder='(branch label / outcome — optional)';sb2.value=sub||'';
+  sb2.style.cssText='width:100%;border:1px dashed #ccc;border-radius:5px;font-family:Arial;font-size:12.5px;color:#2d4a6b;text-align:center;margin-top:4px;padding:3px;';
+  const d=document.createElement('button');d.className='del';d.textContent='×';d.onclick=()=>{const a=n.previousElementSibling;if(a&&a.classList.contains('cn-arrow'))a.remove();n.remove();};
+  n.appendChild(d);n.appendChild(ta);n.appendChild(sb2);c.appendChild(n);}
+function clearCanvas(){document.getElementById('canvas').innerHTML='<div class="canvas-empty" id="cempty">Drag components here</div>';}
+function readNodes(){return [...document.querySelectorAll('#canvas .cnode')].map(n=>({type:n.dataset.type,t:n.querySelector('.nt').value,s:n.querySelector('.ns').value}));}
+
+// ---- JSON upload → diagram ----
+function uploadJson(e){const f=e.target.files[0];if(!f)return;
+  if(f.size > 512*1024){ alert('File too large (max 512 KB). A scenario JSON should be tiny.'); e.target.value=''; return; }
+  const r=new FileReader();r.onload=()=>applyJson(r.result);r.readAsText(f);}
+function loadPasted(){applyJson(document.getElementById('pasteJson').value);}
+let __tree=null;  // holds an imported branching tree (root node), if any
+function sanitizeTree(node,depth){
+  if(!node||typeof node!=='object'||depth>60) return null;
+  const allowedTypes=['start','decision','step','io','terminal'];
+  const S=v=>typeof v==='string'?v.slice(0,2000):'';
+  const out={ type: allowedTypes.includes(node.type)?node.type:'step', t:S(node.t) };
+  if(node.alert===true) out.alert=true;
+  if(node.yesLabel) out.yesLabel=S(node.yesLabel);
+  if(node.noLabel) out.noLabel=S(node.noLabel);
+  if(node.type==='decision'){
+    if(node.yes) out.yes=sanitizeTree(node.yes,depth+1);
+    if(node.no)  out.no =sanitizeTree(node.no,depth+1);
+  } else if(node.next){ out.next=sanitizeTree(node.next,depth+1); }
+  return out;
+}
+function applyJson(text){
+  let obj; try{ obj=JSON.parse(text); }catch(err){ alert('Invalid JSON: '+err.message); return; }
+  let sc;
+  if(obj.type==='sena_v1_full_export' && Array.isArray(obj.scenarios)){
+    if(obj.scenarios.length===0){ alert('Full export has no scenarios.'); return; }
+    sc=obj.scenarios[0]; if(obj.scenarios.length>1) alert('Full export has '+obj.scenarios.length+' scenarios; loading the first.');
+  } else { sc=obj.scenario||obj; }
+  if(typeof sc!=='object'||sc===null){ alert('JSON is not a scenario object.'); return; }
+  const allowedVer=['v1','v2','v3','v4'], allowedPrio=['confirmed','delayed','undecided','deferred','removed'];
+  const S=v=>typeof v==='string'?v.slice(0,2000):'';
+  document.getElementById('scenName').value=S(sc.name);
+  document.getElementById('scenSit').value=S(sc.situation);
+  document.getElementById('scenOut').value=S(sc.outcome);
+  document.getElementById('scenWhy').value=S(sc.why);
+  document.getElementById('scenVer').value=allowedVer.includes(sc.version)?sc.version:'v1';
+  document.getElementById('scenPrio').value=allowedPrio.includes(sc.priority)?sc.priority:'undecided';
+  __tree=null;
+  if(sc.root){
+    // BRANCHING tree format
+    __tree=sanitizeTree(sc.root,0);
+    clearCanvas();
+    document.getElementById('canvas').innerHTML='<div class="canvas-empty">Branching tree loaded from JSON — see preview below. (The drag-builder edits linear flows; branching trees are managed via JSON.)</div>';
+    renderTreePreview(__tree);
+    alert('Branching tree loaded. Review the preview, set version/status, then Save.');
+  } else {
+    // linear nodes format
+    const allowedTypes=['start','decision','step','io','terminal'];
+    const nodes=Array.isArray(sc.nodes)?sc.nodes.slice(0,40).map(n=>({type:allowedTypes.includes(n&&n.type)?n.type:'step',t:S(n&&n.t),s:S(n&&n.s)})):[];
+    clearCanvas();
+    nodes.forEach((n,k)=>{ const c=document.getElementById('canvas');const em=document.getElementById('cempty');if(em)em.remove(); if(k>0){const a=document.createElement('div');a.className='cn-arrow';a.textContent='▼';c.appendChild(a);} addNode(n.type,n.t,n.s); });
+    renderPreview(nodes);
+    alert('JSON loaded and sanitized. Review, set version/status, then Save.');
+  }
+}
+function renderTreePreview(root){ const pv=document.getElementById('preview'); pv.innerHTML='<h3>Diagram preview (branching)</h3>'+treeSVG(root); }
+function renderPreview(nodes){
+  const pv=document.getElementById('preview');
+  if(!nodes||!nodes.length){pv.innerHTML='';return;}
+  pv.innerHTML='<h3>Diagram preview</h3>'+treeSVG(linearToTree(nodes));
+}
+
+// ---- diagram → JSON export ----
+function buildObj(){
+  const o={ name:document.getElementById('scenName').value||'Untitled',
+    situation:document.getElementById('scenSit').value||'',
+    version:document.getElementById('scenVer').value,
+    priority:document.getElementById('scenPrio').value,
+    outcome:document.getElementById('scenOut').value||'',
+    outcomeClass:'oc-alert', why:document.getElementById('scenWhy').value||'',
+    comment:'', nodes:readNodes() };
+  if(__tree) o.root=__tree;   // branching tree, if one was imported
+  return o;
+}
+function exportJson(){ const a=document.getElementById('exportArea'); a.style.display='block'; a.value=JSON.stringify({type:__tree?'sena_scenario_tree':'sena_scenario_v1',schemaVersion:__tree?2:1,scenario:buildObj()},null,2); a.select(); }
+function clearAll(){ ['scenName','scenSit','scenOut','scenWhy'].forEach(id=>document.getElementById(id).value=''); __tree=null; clearCanvas(); document.getElementById('preview').innerHTML=''; }
+
+// ---- SAVE to DB (to the chosen version) ----
+async function saveScenario(){
+  const sc=buildObj();
+  if(!sc.name||sc.name==='Untitled'){ alert('Give the scenario a name.'); return; }
+  if(!__tree && readNodes().length===0){ alert('Add at least one flow component, or upload JSON.'); return; }
+  if(sc.priority==='confirmed' && !isAdmin){ alert('Only the admin can set a scenario to Confirmed.'); return; }
+  const { error } = await sb.from('scenarios').insert({ data:sc, version:sc.version, priority:sc.priority, created_by:currentUserId, last_edited_by:currentUserId });
+  if(error){ alert('Save failed: '+error.message); return; }
+  await sb.rpc('log_audit',{p_action:'created scenario',p_detail:sc.name+' ('+sc.version+')' });
+  alert('Saved to '+sc.version.toUpperCase()+'. Opening that page…');
+  location.href = sc.version+'.html';
+}
+
+(async()=>{ await guard(); })();
+</script>
+</body>
+</html>
