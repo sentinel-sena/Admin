@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SENA — Create New Scenario</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{ --ink:#0d76c4; --ink-soft:#1a8fd6; --orange:#e07b1a; --orange-soft:#fdf0e0; --orange-line:#e8943f; --green:#2a7a2a; --red:#b03a2e; --paper:#fbfaf7; --line:#d9d6cc; --base:17px; }
+  *{box-sizing:border-box;}
+  body{font-family:Georgia,"Times New Roman",serif;color:var(--ink);line-height:1.6;max-width:1040px;margin:0 auto;padding:0 24px 40px;background:var(--paper);font-size:var(--base);}
+  h1{font-size:28px;margin:18px 0 2px;color:var(--orange);} h3{font-size:17px;color:var(--ink-soft);}
+  .lede{color:#5a6573;font-size:16px;margin-top:4px;}
+  .menubar{position:sticky;top:0;background:var(--ink);margin:0 -24px 14px;padding:11px 24px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;z-index:10;}
+  .menubar .brand{color:#fff;font-weight:bold;font-size:19px;margin-right:14px;}
+  .menubar a{font-family:Arial,sans-serif;font-size:14px;font-weight:bold;color:#cdd8e4;text-decoration:none;padding:7px 13px;border-radius:7px;}
+  .menubar a:hover{background:#22344e;color:#fff;} .menubar a.new{background:var(--orange);color:#fff;}
+  .menubar .who{margin-left:auto;color:#9fb0c2;font-family:Arial,sans-serif;font-size:12.5px;} .menubar .who a{color:#cdd8e4;}
+  .row{font-family:Arial,sans-serif;font-size:14px;margin:10px 0;}
+  .row label{display:inline-block;width:130px;font-weight:bold;color:var(--ink-soft);vertical-align:top;}
+  .row input,.row select,.row textarea{font-family:Arial,sans-serif;font-size:14px;padding:7px 10px;border:1.5px solid var(--line);border-radius:6px;}
+  .row input,.row textarea{width:62%;} .namef{width:62%;}
+  .builder-wrap{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;}
+  .palette{flex:0 0 200px;background:#f6f3ea;border:2px solid var(--line);border-radius:8px;padding:12px;}
+  .palette h4{margin:4px 0 10px;font-family:Arial,sans-serif;font-size:14px;}
+  .pal-item{background:var(--orange-soft);border:2px solid var(--orange);border-radius:6px;padding:8px 10px;margin:7px 0;font-family:Arial,sans-serif;font-size:13.5px;font-weight:bold;color:var(--ink);cursor:grab;text-align:center;}
+  .pal-item.dec{background:#fff6e9;border-style:dashed;} .pal-item.term{background:#fbe4df;border-color:var(--red);color:var(--red);}
+  .canvas{flex:1;min-width:320px;min-height:340px;background:#fffdf8;border:2px dashed var(--orange);border-radius:8px;padding:14px;}
+  .canvas-empty{color:#b0a98f;font-family:Arial,sans-serif;text-align:center;margin-top:40px;font-size:15px;}
+  .cnode{background:var(--orange-soft);border:2.5px solid var(--orange);border-radius:8px;padding:8px 12px;margin:8px auto;max-width:440px;position:relative;}
+  .cnode.dec{background:#fff6e9;border-style:dashed;} .cnode.term{background:#fbe4df;border-color:var(--red);}
+  .cnode textarea{width:100%;border:none;background:transparent;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;color:var(--ink);text-align:center;resize:vertical;}
+  .cnode.term textarea{color:var(--red);}
+  .cnode .del{position:absolute;top:-9px;right:-9px;background:var(--red);color:#fff;border:none;border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:14px;line-height:1;}
+  .cn-arrow{text-align:center;color:var(--orange-line);font-weight:bold;font-size:22px;}
+  .btn{font-family:Arial,sans-serif;font-size:14px;font-weight:bold;padding:9px 16px;border-radius:6px;border:2px solid var(--ink);background:#fff;color:var(--ink);cursor:pointer;margin:4px 6px 4px 0;}
+  .btn.primary{background:var(--ink);color:#fff;} .btn.orange{background:var(--orange);color:#fff;border-color:var(--orange);}
+  textarea.jsonarea{width:100%;height:120px;font-family:"Courier New",monospace;font-size:12.5px;border:1.5px solid var(--line);border-radius:6px;padding:10px;}
+  .sect{background:#fff;border:1px solid var(--line);border-radius:8px;padding:16px 18px;margin:16px 0;}
+  .preview .farrow{text-align:center;color:var(--orange-line);font-weight:bold;font-size:20px;}
+  .fnode{display:block;max-width:480px;margin:6px auto;background:var(--orange-soft);border:2.5px solid var(--orange);border-radius:8px;padding:9px 14px;font-family:Arial,sans-serif;text-align:center;}
+  .fnode .t{color:var(--ink);font-weight:bold;font-size:15px;} .fnode.start{background:var(--ink);} .fnode.start .t{color:#fff;}
+  .fnode.decision{background:#fff6e9;border-style:dashed;} .fnode.terminal{background:#fbe4df;border-color:var(--red);} .fnode.terminal .t{color:var(--red);}
+</style>
+</head>
+<body>
+
+<div class="menubar">
+  <span class="brand">SENA</span>
+  <a href="demonstrator.html">Home</a><a href="v1.html">V1</a><a href="v2.html">V2</a><a href="v3.html">V3</a><a href="v4.html">V4</a>
+  <a href="create.html" class="new">＋ Create New</a>
+  <span class="who" id="who"></span>
+</div>
+
+<h1>Create New Scenario</h1>
+<p class="lede">Build a scenario by dragging components, or upload a JSON to render it as a diagram. Tag it to a version (V1–V4) and set its status. On save it appears on that version's page. Existing scenarios are never deleted — only hidden via "Removed".</p>
+
+<div class="sect">
+  <div class="row"><label>Scenario name</label><input class="namef" id="scenName" placeholder="e.g. Child crosses with the maid"></div>
+  <div class="row"><label>Situation</label><textarea id="scenSit" rows="2" placeholder="Describe the situation"></textarea></div>
+  <div class="row"><label>Assign to version</label>
+    <select id="scenVer"><option value="v1">V1 — Child Safety</option><option value="v2">V2 — Talking SENA</option><option value="v3">V3 — Supervision</option><option value="v4">V4 — Identity</option></select></div>
+  <div class="row"><label>Status</label>
+    <select id="scenPrio"><option value="undecided">Not decided</option><option value="delayed">Delayed</option><option value="deferred">Deferred</option><option value="confirmed">Confirmed (admin only)</option><option value="removed">Removed (hidden)</option></select></div>
+  <div class="row"><label>Outcome</label><input id="scenOut" placeholder="e.g. CONFIRMED ALERT"></div>
+  <div class="row"><label>Why (reasoning)</label><textarea id="scenWhy" rows="2" placeholder="Why this outcome"></textarea></div>
+</div>
+
+<div class="sect">
+  <h3>Build the flow (drag components, click to edit text)</h3>
+  <div class="builder-wrap">
+    <div class="palette"><h4>Drag →</h4>
+      <div class="pal-item" draggable="true" data-type="start">Start / Detection</div>
+      <div class="pal-item dec" draggable="true" data-type="decision">Decision / Question</div>
+      <div class="pal-item" draggable="true" data-type="step">Action / Step</div>
+      <div class="pal-item term" draggable="true" data-type="terminal">Outcome</div>
+    </div>
+    <div class="canvas" id="canvas" ondragover="event.preventDefault()" ondrop="drop(event)"><div class="canvas-empty" id="cempty">Drag components here</div></div>
+  </div>
+</div>
+
+<div class="sect">
+  <h3>Or: upload JSON → render as diagram</h3>
+  <input type="file" id="jsonFile" accept="application/json,.json" onchange="uploadJson(event)">
+  <button class="btn" onclick="document.getElementById('pasteWrap').style.display='block'">Or paste JSON</button>
+  <div id="pasteWrap" style="display:none;margin-top:10px;">
+    <textarea class="jsonarea" id="pasteJson" placeholder="Paste scenario JSON here..."></textarea>
+    <button class="btn" onclick="loadPasted()">Render this JSON</button>
+  </div>
+  <div class="preview" id="preview" style="margin-top:14px;"></div>
+</div>
+
+<div class="sect">
+  <button class="btn primary" onclick="saveScenario()">Save scenario to its version page</button>
+  <button class="btn orange" onclick="exportJson()">Export diagram → JSON</button>
+  <button class="btn" onclick="clearAll()">Clear</button>
+  <textarea class="jsonarea" id="exportArea" style="display:none;margin-top:10px;" readonly></textarea>
+</div>
+
+<script>
+const SUPABASE_URL="https://bzwdvdbmpurqqpntrcio.supabase.co";
+const SUPABASE_KEY="sb_publishable_6YrFzgL6-Whlft8lofg5Nw_jxIsPz_t";
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+let isAdmin=false,currentUserId=null;
+// ---- standard-symbol SVG flowchart renderer ----
+function svgFlow(nodes){
+  if(!nodes||!nodes.length) return '';
+  const W=520, padX=18, gapY=26, lblH=18;
+  const esc2=s=>(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  function wrap(t,max){t=(t||'').toString();const w=t.split(/\s+/);const lines=[];let cur='';
+    w.forEach(x=>{if((cur+' '+x).trim().length>max){if(cur)lines.push(cur);cur=x;}else cur=(cur+' '+x).trim();});if(cur)lines.push(cur);return lines.slice(0,3);}
+  // measure heights
+  const items=nodes.map(n=>{const lines=wrap(n.t,38);const h=Math.max(46, lines.length*18+22);return {n,lines,h};});
+  let totalH=10; items.forEach((it,i)=>{ totalH+=it.h; if(i<items.length-1) totalH+=gapY+(items[i+1].n.s?lblH:0); });
+  totalH+=14;
+  let y=10, svg='<svg viewBox="0 0 '+W+' '+totalH+'" width="100%" xmlns="http://www.w3.org/2000/svg" style="max-width:560px;display:block;margin:0 auto;font-family:Arial">';
+  svg+='<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1 L9 5 L1 9" fill="none" stroke="#1a8fd6" stroke-width="1.6"/></marker></defs>';
+  const cx=W/2;
+  items.forEach((it,i)=>{
+    const n=it.n, h=it.h, type=n.type;
+    const fill = type==='terminal' ? '#fbe4df' : type==='decision' ? '#fff6e9' : type==='start' ? '#0d76c4' : type==='io' ? '#eef7ff' : '#fdf0e0';
+    const stroke = type==='terminal' ? '#b03a2e' : type==='start' ? '#0d76c4' : '#e07b1a';
+    const tcol = type==='start' ? '#ffffff' : type==='terminal' ? '#b03a2e' : '#16243a';
+    const w = 300, x = cx - w/2, top=y;
+    if(type==='start'||type==='terminal'){ // stadium
+      svg+='<rect x="'+x+'" y="'+top+'" width="'+w+'" height="'+h+'" rx="'+(h/2)+'" ry="'+(h/2)+'" fill="'+fill+'" stroke="'+stroke+'" stroke-width="2.5"/>';
+    } else if(type==='decision'){ // diamond
+      const mx=cx, my=top+h/2; const dw=w/2+20, dh=h/2+8;
+      svg+='<polygon points="'+mx+','+(my-dh)+' '+(mx+dw)+','+my+' '+mx+','+(my+dh)+' '+(mx-dw)+','+my+'" fill="'+fill+'" stroke="'+stroke+'" stroke-width="2.5"/>';
+    } else if(type==='io'){ // parallelogram
+      const sk=22;
+      svg+='<polygon points="'+(x+sk)+','+top+' '+(x+w)+','+top+' '+(x+w-sk)+','+(top+h)+' '+x+','+(top+h)+'" fill="'+fill+'" stroke="'+stroke+'" stroke-width="2.5"/>';
+    } else { // process rectangle
+      svg+='<rect x="'+x+'" y="'+top+'" width="'+w+'" height="'+h+'" rx="6" fill="'+fill+'" stroke="'+stroke+'" stroke-width="2.5"/>';
+    }
+    const startY=top+h/2-((it.lines.length-1)*9);
+    it.lines.forEach((ln,li)=>{ svg+='<text x="'+cx+'" y="'+(startY+li*18+5)+'" text-anchor="middle" font-size="14" font-weight="bold" fill="'+tcol+'">'+esc2(ln)+'</text>'; });
+    y=top+h;
+    if(i<items.length-1){
+      const ny=y+gapY+(items[i+1].n.s?lblH:0);
+      svg+='<line x1="'+cx+'" y1="'+y+'" x2="'+cx+'" y2="'+(ny-2)+'" stroke="#1a8fd6" stroke-width="1.8" marker-end="url(#ah)"/>';
+      if(items[i+1].n.s){ svg+='<text x="'+(cx+8)+'" y="'+(y+gapY/2+4)+'" text-anchor="start" font-size="12" font-weight="bold" fill="#1a8fd6">'+esc2(items[i+1].n.s)+'</text>'; }
+      y=ny;
+    }
+  });
+  svg+='</svg>';
+  return svg;
+}
+
+function getTok(){let t=localStorage.getItem('sena_device_token');if(!t){t='dev_'+crypto.randomUUID();localStorage.setItem('sena_device_token',t);}return t;}
+function bounce(m){document.body.innerHTML='<div style="font-family:Arial;max-width:520px;margin:80px auto;padding:30px;background:#fdf0ee;border:2px solid #b03a2e;border-radius:12px;color:#8a2a1c;text-align:center;"><h2>🚫 Sign-in required</h2><p>'+m+'</p><a href="index.html" style="display:inline-block;margin-top:10px;background:#16243a;color:#fff;padding:11px 22px;border-radius:8px;text-decoration:none;font-weight:bold;">Go to sign in</a></div>';}
+function esc(s){return (s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+async function guard(){
+  const { data:{ session } }=await sb.auth.getSession();
+  if(!session){ bounce('You are not signed in.'); return false; }
+  currentUserId=session.user.id; const myTok=getTok(); let prof;
+  try{ const r=await sb.from('profiles').select('approved,is_admin,bound_device_id,email').eq('id',currentUserId).single(); prof=r.data; }
+  catch(e){ bounce('Could not verify your account.'); return false; }
+  if(!prof||!prof.approved){ bounce('Your access is not approved.'); return false; }
+  if(prof.bound_device_id && prof.bound_device_id!==myTok){ await sb.auth.signOut(); bounce('This account is locked to another browser/device.'); return false; }
+  isAdmin=!!prof.is_admin;
+  document.getElementById('who').innerHTML=prof.email+(isAdmin?' · ADMIN':'')+' &nbsp;<a href="#" onclick="so()">sign out</a>';
+  return true;
+}
+async function so(){ await sb.auth.signOut(); location.href='index.html'; }
+
+// ---- drag builder ----
+let dragType=null;
+document.querySelectorAll('.pal-item').forEach(el=>el.addEventListener('dragstart',()=>dragType=el.dataset.type));
+const labels={start:'Start / Detection',decision:'Decision / Question',step:'Action / Step',terminal:'Outcome'};
+function drop(e){e.preventDefault();if(!dragType)return;const c=document.getElementById('canvas'),em=document.getElementById('cempty');if(em)em.remove();
+  if(c.querySelector('.cnode')){const a=document.createElement('div');a.className='cn-arrow';a.textContent='▼';c.appendChild(a);}
+  addNode(dragType,labels[dragType]);dragType=null;}
+function addNode(type,text,sub){const c=document.getElementById('canvas');
+  const n=document.createElement('div');n.className='cnode'+(type==='decision'?' dec':type==='terminal'?' term':'');n.dataset.type=type;
+  const ta=document.createElement('textarea');ta.rows=2;ta.value=text||'';ta.className='nt';
+  const sb2=document.createElement('input');sb2.className='ns';sb2.placeholder='(branch label / outcome — optional)';sb2.value=sub||'';
+  sb2.style.cssText='width:100%;border:1px dashed #ccc;border-radius:5px;font-family:Arial;font-size:12.5px;color:#2d4a6b;text-align:center;margin-top:4px;padding:3px;';
+  const d=document.createElement('button');d.className='del';d.textContent='×';d.onclick=()=>{const a=n.previousElementSibling;if(a&&a.classList.contains('cn-arrow'))a.remove();n.remove();};
+  n.appendChild(d);n.appendChild(ta);n.appendChild(sb2);c.appendChild(n);}
+function clearCanvas(){document.getElementById('canvas').innerHTML='<div class="canvas-empty" id="cempty">Drag components here</div>';}
+function readNodes(){return [...document.querySelectorAll('#canvas .cnode')].map(n=>({type:n.dataset.type,t:n.querySelector('.nt').value,s:n.querySelector('.ns').value}));}
+
+// ---- JSON upload → diagram ----
+function uploadJson(e){const f=e.target.files[0];if(!f)return;
+  if(f.size > 512*1024){ alert('File too large (max 512 KB). A scenario JSON should be tiny.'); e.target.value=''; return; }
+  const r=new FileReader();r.onload=()=>applyJson(r.result);r.readAsText(f);}
+function loadPasted(){applyJson(document.getElementById('pasteJson').value);}
+function applyJson(text){
+  let obj; try{ obj=JSON.parse(text); }catch(err){ alert('Invalid JSON: '+err.message); return; }
+  // B: accept single {scenario:{}}, raw scenario, OR a full export {scenarios:[...]}
+  let sc;
+  if(obj.type==='sena_v1_full_export' && Array.isArray(obj.scenarios)){
+    if(obj.scenarios.length===0){ alert('Full export has no scenarios.'); return; }
+    sc = obj.scenarios[0];
+    if(obj.scenarios.length>1) alert('Full export has '+obj.scenarios.length+' scenarios; loading the first. Import others separately.');
+  } else { sc = obj.scenario || obj; }
+  if(typeof sc!=='object' || sc===null){ alert('JSON is not a scenario object.'); return; }
+  const allowedTypes=['start','decision','step','terminal'];
+  const allowedVer=['v1','v2','v3','v4'];
+  const allowedPrio=['confirmed','delayed','undecided','deferred','removed'];
+  const S=v=>typeof v==='string'?v.slice(0,2000):'';
+  const clean={
+    name:S(sc.name), situation:S(sc.situation), outcome:S(sc.outcome), why:S(sc.why),
+    version: allowedVer.includes(sc.version)? sc.version : 'v1',
+    priority: allowedPrio.includes(sc.priority)? sc.priority : 'undecided',
+    nodes: Array.isArray(sc.nodes)? sc.nodes.slice(0,40).map(n=>({
+      type: allowedTypes.includes(n&&n.type)? n.type : 'step',
+      t: S(n&&n.t), s: S(n&&n.s)
+    })) : []
+  };
+  document.getElementById('scenName').value=clean.name;
+  document.getElementById('scenSit').value=clean.situation;
+  document.getElementById('scenOut').value=clean.outcome;
+  document.getElementById('scenWhy').value=clean.why;
+  document.getElementById('scenVer').value=clean.version;
+  document.getElementById('scenPrio').value=clean.priority;
+  clearCanvas();
+  clean.nodes.forEach((n,k)=>{ const c=document.getElementById('canvas');const em=document.getElementById('cempty');if(em)em.remove(); if(k>0){const a=document.createElement('div');a.className='cn-arrow';a.textContent='▼';c.appendChild(a);} addNode(n.type, n.t, n.s); });  // C: pass t and s separately
+  renderPreview(clean.nodes);
+  alert('JSON loaded and sanitized. Review, set version/status, then Save.');
+}
+function renderPreview(nodes){
+  const pv=document.getElementById('preview');
+  if(!nodes||!nodes.length){pv.innerHTML='';return;}
+  pv.innerHTML='<h3>Diagram preview</h3>'+svgFlow(nodes);
+}
+
+// ---- diagram → JSON export ----
+function buildObj(){
+  return { name:document.getElementById('scenName').value||'Untitled',
+    situation:document.getElementById('scenSit').value||'',
+    version:document.getElementById('scenVer').value,
+    priority:document.getElementById('scenPrio').value,
+    outcome:document.getElementById('scenOut').value||'',
+    outcomeClass:'oc-alert', why:document.getElementById('scenWhy').value||'',
+    comment:'', nodes:readNodes() };
+}
+function exportJson(){ const a=document.getElementById('exportArea'); a.style.display='block'; a.value=JSON.stringify({type:'sena_scenario_v1',schemaVersion:1,scenario:buildObj()},null,2); a.select(); }
+function clearAll(){ ['scenName','scenSit','scenOut','scenWhy'].forEach(id=>document.getElementById(id).value=''); clearCanvas(); document.getElementById('preview').innerHTML=''; }
+
+// ---- SAVE to DB (to the chosen version) ----
+async function saveScenario(){
+  const sc=buildObj();
+  if(!sc.name||sc.name==='Untitled'){ alert('Give the scenario a name.'); return; }
+  if(readNodes().length===0){ alert('Add at least one flow component (or upload JSON).'); return; }
+  if(sc.priority==='confirmed' && !isAdmin){ alert('Only the admin can set a scenario to Confirmed. Choose another status, or ask admin.'); return; }
+  const { error } = await sb.from('scenarios').insert({ data:sc, version:sc.version, priority:sc.priority, created_by:currentUserId, last_edited_by:currentUserId });
+  if(error){ alert('Save failed: '+error.message); return; }
+  await sb.rpc('log_audit',{p_action:'created scenario',p_detail:sc.name+' ('+sc.version+')' });
+  alert('Saved to '+sc.version.toUpperCase()+'. Opening that page…');
+  location.href = sc.version+'.html';
+}
+
+(async()=>{ await guard(); })();
+</script>
+</body>
+</html>
