@@ -6,7 +6,7 @@
 <title>SENA — Board Hub</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  :root{ --ink:#ED6A5A; --ink-soft:#3E8E96; --orange:#3E8E96; --orange-soft:#DCE4DC;
+  :root{ --ink:#3E8E96; --ink-soft:#3E8E96; --orange:#3E8E96; --orange-soft:#DCE4DC;
          --green:#3E8E96; --red:#b03a2e; --paper:#f4f7f4; --line:#c4d2cc; --base:17px; }
   *{box-sizing:border-box;}
   body{font-family:Georgia,"Times New Roman",serif;color:var(--ink);line-height:1.6;
@@ -20,8 +20,8 @@
   .menubar .brand{color:#fff;font-weight:bold;font-size:19px;margin-right:14px;}
   .menubar a{font-family:Arial,sans-serif;font-size:14px;font-weight:bold;color:#cdd8e4;text-decoration:none;
              padding:7px 13px;border-radius:7px;}
-  .menubar a:hover{background:#22344e;color:#fff;}
-  .menubar a.active{background:var(--orange);color:#fff;}
+  .menubar a:hover{background:#2f6e74;color:#fff;}
+  .menubar a.active{background:#ED6A5A;color:#fff;}
   .menubar a.new{background:#fff;color:var(--ink);}
   .menubar .who{margin-left:auto;color:#9fb0c2;font-family:Arial,sans-serif;font-size:12.5px;}
   .menubar .who a{color:#cdd8e4;padding:4px 8px;}
@@ -139,7 +139,7 @@ async function guard(){
   if(!prof||!prof.approved){ bounce('Your access is not approved. Contact the admin.'); return false; }
   if(prof.bound_device_id && prof.bound_device_id!==myTok){ await sb.auth.signOut(); bounce('This account is locked to another browser/device. Sign in on your registered browser, or contact the admin.'); return false; }
   isAdmin=!!prof.is_admin;
-  document.getElementById('who').innerHTML=prof.email+(isAdmin?' · ADMIN':'')+' &nbsp;<a href="#" onclick="signOut()">sign out</a>';
+  {const w=document.getElementById('who');w.textContent=prof.email+(isAdmin?' · ADMIN':'')+'  ';const a=document.createElement('a');a.href='#';a.textContent='sign out';a.onclick=signOut;w.appendChild(a);}
   if(isAdmin) document.body.classList.add('is-admin');
   return true;
 }
