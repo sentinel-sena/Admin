@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SENA — Create New Scenario</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{ --ink:#16243a; --ink-soft:#2d4a6b; --orange:#e07b1a; --orange-soft:#fdf0e0; --orange-line:#e8943f; --green:#2a7a2a; --red:#b03a2e; --paper:#fbfaf7; --line:#d9d6cc; --base:17px; }
+  *{box-sizing:border-box;}
+  body{font-family:Georgia,"Times New Roman",serif;color:var(--ink);line-height:1.6;max-width:1040px;margin:0 auto;padding:0 24px 40px;background:var(--paper);font-size:var(--base);}
+  h1{font-size:28px;margin:18px 0 2px;color:var(--orange);} h3{font-size:17px;color:var(--ink-soft);}
+  .lede{color:#5a6573;font-size:16px;margin-top:4px;}
+  .menubar{position:sticky;top:0;background:var(--ink);margin:0 -24px 14px;padding:11px 24px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;z-index:10;}
+  .menubar .brand{color:#fff;font-weight:bold;font-size:19px;margin-right:14px;}
+  .menubar a{font-family:Arial,sans-serif;font-size:14px;font-weight:bold;color:#cdd8e4;text-decoration:none;padding:7px 13px;border-radius:7px;}
+  .menubar a:hover{background:#22344e;color:#fff;} .menubar a.new{background:var(--orange);color:#fff;}
+  .menubar .who{margin-left:auto;color:#9fb0c2;font-family:Arial,sans-serif;font-size:12.5px;} .menubar .who a{color:#cdd8e4;}
+  .row{font-family:Arial,sans-serif;font-size:14px;margin:10px 0;}
+  .row label{display:inline-block;width:130px;font-weight:bold;color:var(--ink-soft);vertical-align:top;}
+  .row input,.row select,.row textarea{font-family:Arial,sans-serif;font-size:14px;padding:7px 10px;border:1.5px solid var(--line);border-radius:6px;}
+  .row input,.row textarea{width:62%;} .namef{width:62%;}
+  .builder-wrap{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;}
+  .palette{flex:0 0 200px;background:#f6f3ea;border:2px solid var(--line);border-radius:8px;padding:12px;}
+  .palette h4{margin:4px 0 10px;font-family:Arial,sans-serif;font-size:14px;}
+  .pal-item{background:var(--orange-soft);border:2px solid var(--orange);border-radius:6px;padding:8px 10px;margin:7px 0;font-family:Arial,sans-serif;font-size:13.5px;font-weight:bold;color:var(--ink);cursor:grab;text-align:center;}
+  .pal-item.dec{background:#fff6e9;border-style:dashed;} .pal-item.term{background:#fbe4df;border-color:var(--red);color:var(--red);}
+  .canvas{flex:1;min-width:320px;min-height:340px;background:#fffdf8;border:2px dashed var(--orange);border-radius:8px;padding:14px;}
+  .canvas-empty{color:#b0a98f;font-family:Arial,sans-serif;text-align:center;margin-top:40px;font-size:15px;}
+  .cnode{background:var(--orange-soft);border:2.5px solid var(--orange);border-radius:8px;padding:8px 12px;margin:8px auto;max-width:440px;position:relative;}
+  .cnode.dec{background:#fff6e9;border-style:dashed;} .cnode.term{background:#fbe4df;border-color:var(--red);}
+  .cnode textarea{width:100%;border:none;background:transparent;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;color:var(--ink);text-align:center;resize:vertical;}
+  .cnode.term textarea{color:var(--red);}
+  .cnode .del{position:absolute;top:-9px;right:-9px;background:var(--red);color:#fff;border:none;border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:14px;line-height:1;}
+  .cn-arrow{text-align:center;color:var(--orange-line);font-weight:bold;font-size:22px;}
+  .btn{font-family:Arial,sans-serif;font-size:14px;font-weight:bold;padding:9px 16px;border-radius:6px;border:2px solid var(--ink);background:#fff;color:var(--ink);cursor:pointer;margin:4px 6px 4px 0;}
+  .btn.primary{background:var(--ink);color:#fff;} .btn.orange{background:var(--orange);color:#fff;border-color:var(--orange);}
+  textarea.jsonarea{width:100%;height:120px;font-family:"Courier New",monospace;font-size:12.5px;border:1.5px solid var(--line);border-radius:6px;padding:10px;}
+  .sect{background:#fff;border:1px solid var(--line);border-radius:8px;padding:16px 18px;margin:16px 0;}
+  .preview .farrow{text-align:center;color:var(--orange-line);font-weight:bold;font-size:20px;}
+  .fnode{display:block;max-width:480px;margin:6px auto;background:var(--orange-soft);border:2.5px solid var(--orange);border-radius:8px;padding:9px 14px;font-family:Arial,sans-serif;text-align:center;}
+  .fnode .t{color:var(--ink);font-weight:bold;font-size:15px;} .fnode.start{background:var(--ink);} .fnode.start .t{color:#fff;}
+  .fnode.decision{background:#fff6e9;border-style:dashed;} .fnode.terminal{background:#fbe4df;border-color:var(--red);} .fnode.terminal .t{color:var(--red);}
+</style>
+</head>
+<body>
+
+<div class="menubar">
+  <span class="brand">SENA</span>
+  <a href="demonstrator.html">Home</a><a href="v1.html">V1</a><a href="v2.html">V2</a><a href="v3.html">V3</a><a href="v4.html">V4</a>
+  <a href="create.html" class="new">＋ Create New</a>
+  <span class="who" id="who"></span>
+</div>
+
+<h1>Create New Scenario</h1>
+<p class="lede">Build a scenario by dragging components, or upload a JSON to render it as a diagram. Tag it to a version (V1–V4) and set its status. On save it appears on that version's page. Existing scenarios are never deleted — only hidden via "Removed".</p>
+
+<div class="sect">
+  <div class="row"><label>Scenario name</label><input class="namef" id="scenName" placeholder="e.g. Child crosses with the maid"></div>
+  <div class="row"><label>Situation</label><textarea id="scenSit" rows="2" placeholder="Describe the situation"></textarea></div>
+  <div class="row"><label>Assign to version</label>
+    <select id="scenVer"><option value="v1">V1 — Child Safety</option><option value="v2">V2 — Talking SENA</option><option value="v3">V3 — Supervision</option><option value="v4">V4 — Identity</option></select></div>
+  <div class="row"><label>Status</label>
+    <select id="scenPrio"><option value="undecided">Not decided</option><option value="delayed">Delayed</option><option value="deferred">Deferred</option><option value="confirmed">Confirmed (admin only)</option><option value="removed">Removed (hidden)</option></select></div>
+  <div class="row"><label>Outcome</label><input id="scenOut" placeholder="e.g. CONFIRMED ALERT"></div>
+  <div class="row"><label>Why (reasoning)</label><textarea id="scenWhy" rows="2" placeholder="Why this outcome"></textarea></div>
+</div>
+
+<div class="sect">
+  <h3>Build the flow (drag components, click to edit text)</h3>
+  <div class="builder-wrap">
+    <div class="palette"><h4>Drag →</h4>
+      <div class="pal-item" draggable="true" data-type="start">Start / Detection</div>
+      <div class="pal-item dec" draggable="true" data-type="decision">Decision / Question</div>
+      <div class="pal-item" draggable="true" data-type="step">Action / Step</div>
+      <div class="pal-item term" draggable="true" data-type="terminal">Outcome</div>
+    </div>
+    <div class="canvas" id="canvas" ondragover="event.preventDefault()" ondrop="drop(event)"><div class="canvas-empty" id="cempty">Drag components here</div></div>
+  </div>
+</div>
+
+<div class="sect">
+  <h3>Or: upload JSON → render as diagram</h3>
+  <input type="file" id="jsonFile" accept="application/json,.json" onchange="uploadJson(event)">
+  <button class="btn" onclick="document.getElementById('pasteWrap').style.display='block'">Or paste JSON</button>
+  <div id="pasteWrap" style="display:none;margin-top:10px;">
+    <textarea class="jsonarea" id="pasteJson" placeholder="Paste scenario JSON here..."></textarea>
+    <button class="btn" onclick="loadPasted()">Render this JSON</button>
+  </div>
+  <div class="preview" id="preview" style="margin-top:14px;"></div>
+</div>
+
+<div class="sect">
+  <button class="btn primary" onclick="saveScenario()">Save scenario to its version page</button>
+  <button class="btn orange" onclick="exportJson()">Export diagram → JSON</button>
+  <button class="btn" onclick="clearAll()">Clear</button>
+  <textarea class="jsonarea" id="exportArea" style="display:none;margin-top:10px;" readonly></textarea>
+</div>
+
+<script>
+const SUPABASE_URL="https://bzwdvdbmpurqqpntrcio.supabase.co";
+const SUPABASE_KEY="sb_publishable_6YrFzgL6-Whlft8lofg5Nw_jxIsPz_t";
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+let isAdmin=false,currentUserId=null;
+function getTok(){let t=localStorage.getItem('sena_device_token');if(!t){t='dev_'+crypto.randomUUID();localStorage.setItem('sena_device_token',t);}return t;}
+function bounce(m){document.body.innerHTML='<div style="font-family:Arial;max-width:520px;margin:80px auto;padding:30px;background:#fdf0ee;border:2px solid #b03a2e;border-radius:12px;color:#8a2a1c;text-align:center;"><h2>🚫 Sign-in required</h2><p>'+m+'</p><a href="index.html" style="display:inline-block;margin-top:10px;background:#16243a;color:#fff;padding:11px 22px;border-radius:8px;text-decoration:none;font-weight:bold;">Go to sign in</a></div>';}
+function esc(s){return (s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+async function guard(){
+  const { data:{ session } }=await sb.auth.getSession();
+  if(!session){ bounce('You are not signed in.'); return false; }
+  currentUserId=session.user.id; const myTok=getTok(); let prof;
+  try{ const r=await sb.from('profiles').select('approved,is_admin,bound_device_id,email').eq('id',currentUserId).single(); prof=r.data; }
+  catch(e){ bounce('Could not verify your account.'); return false; }
+  if(!prof||!prof.approved){ bounce('Your access is not approved.'); return false; }
+  if(prof.bound_device_id && prof.bound_device_id!==myTok){ await sb.auth.signOut(); bounce('This account is locked to another browser/device.'); return false; }
+  isAdmin=!!prof.is_admin;
+  document.getElementById('who').innerHTML=prof.email+(isAdmin?' · ADMIN':'')+' &nbsp;<a href="#" onclick="so()">sign out</a>';
+  return true;
+}
+async function so(){ await sb.auth.signOut(); location.href='index.html'; }
+
+// ---- drag builder ----
+let dragType=null;
+document.querySelectorAll('.pal-item').forEach(el=>el.addEventListener('dragstart',()=>dragType=el.dataset.type));
+const labels={start:'Start / Detection',decision:'Decision / Question',step:'Action / Step',terminal:'Outcome'};
+function drop(e){e.preventDefault();if(!dragType)return;const c=document.getElementById('canvas'),em=document.getElementById('cempty');if(em)em.remove();
+  if(c.querySelector('.cnode')){const a=document.createElement('div');a.className='cn-arrow';a.textContent='▼';c.appendChild(a);}
+  addNode(dragType,labels[dragType]);dragType=null;}
+function addNode(type,text){const c=document.getElementById('canvas');
+  const n=document.createElement('div');n.className='cnode'+(type==='decision'?' dec':type==='terminal'?' term':'');n.dataset.type=type;
+  const ta=document.createElement('textarea');ta.rows=2;ta.value=text;
+  const d=document.createElement('button');d.className='del';d.textContent='×';d.onclick=()=>{const a=n.previousElementSibling;if(a&&a.classList.contains('cn-arrow'))a.remove();n.remove();};
+  n.appendChild(d);n.appendChild(ta);c.appendChild(n);}
+function clearCanvas(){document.getElementById('canvas').innerHTML='<div class="canvas-empty" id="cempty">Drag components here</div>';}
+function readNodes(){return [...document.querySelectorAll('#canvas .cnode')].map(n=>({type:n.dataset.type,t:n.querySelector('textarea').value}));}
+
+// ---- JSON upload → diagram ----
+function uploadJson(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>applyJson(r.result);r.readAsText(f);}
+function loadPasted(){applyJson(document.getElementById('pasteJson').value);}
+function applyJson(text){
+  let obj; try{ obj=JSON.parse(text); }catch(err){ alert('Invalid JSON: '+err.message); return; }
+  const sc = obj.scenario || obj;  // accept {scenario:{...}} or a raw scenario
+  if(sc.name) document.getElementById('scenName').value=sc.name;
+  if(sc.situation) document.getElementById('scenSit').value=sc.situation;
+  if(sc.outcome) document.getElementById('scenOut').value=sc.outcome;
+  if(sc.why) document.getElementById('scenWhy').value=sc.why;
+  if(sc.version) document.getElementById('scenVer').value=sc.version;
+  if(sc.priority) document.getElementById('scenPrio').value=sc.priority;
+  // render nodes into canvas
+  clearCanvas();
+  (sc.nodes||[]).forEach((n,k)=>{ if(k>0){const c=document.getElementById('canvas');const em=document.getElementById('cempty');if(em)em.remove();const a=document.createElement('div');a.className='cn-arrow';a.textContent='▼';c.appendChild(a);} const em=document.getElementById('cempty');if(em)em.remove(); addNode(n.type, n.t + (n.s? ' — '+n.s : '')); });
+  renderPreview(sc.nodes||readNodes());
+  alert('JSON loaded into the builder. Review, set version/status, then Save.');
+}
+function renderPreview(nodes){
+  const pv=document.getElementById('preview');
+  if(!nodes||!nodes.length){pv.innerHTML='';return;}
+  let h='<h3>Diagram preview</h3>';
+  nodes.forEach((n,k)=>{ if(k>0)h+='<div class="farrow">▼</div>';
+    const cls=n.type==='terminal'?'terminal':n.type==='decision'?'decision':n.type==='start'?'start':'';
+    h+='<div class="fnode '+cls+'"><span class="t">'+esc(n.t)+'</span></div>'; });
+  pv.innerHTML=h;
+}
+
+// ---- diagram → JSON export ----
+function buildObj(){
+  return { name:document.getElementById('scenName').value||'Untitled',
+    situation:document.getElementById('scenSit').value||'',
+    version:document.getElementById('scenVer').value,
+    priority:document.getElementById('scenPrio').value,
+    outcome:document.getElementById('scenOut').value||'',
+    outcomeClass:'oc-alert', why:document.getElementById('scenWhy').value||'',
+    comment:'', nodes:readNodes() };
+}
+function exportJson(){ const a=document.getElementById('exportArea'); a.style.display='block'; a.value=JSON.stringify({type:'sena_scenario_v1',scenario:buildObj()},null,2); a.select(); }
+function clearAll(){ ['scenName','scenSit','scenOut','scenWhy'].forEach(id=>document.getElementById(id).value=''); clearCanvas(); document.getElementById('preview').innerHTML=''; }
+
+// ---- SAVE to DB (to the chosen version) ----
+async function saveScenario(){
+  const sc=buildObj();
+  if(!sc.name||sc.name==='Untitled'){ alert('Give the scenario a name.'); return; }
+  if(readNodes().length===0){ alert('Add at least one flow component (or upload JSON).'); return; }
+  if(sc.priority==='confirmed' && !isAdmin){ alert('Only the admin can set a scenario to Confirmed. Choose another status, or ask admin.'); return; }
+  const { error } = await sb.from('scenarios').insert({ data:sc, version:sc.version, priority:sc.priority, created_by:currentUserId, last_edited_by:currentUserId });
+  if(error){ alert('Save failed: '+error.message); return; }
+  await sb.from('audit_log').insert({ user_id:currentUserId, action:'created scenario', detail:sc.name+' ('+sc.version+')' });
+  alert('Saved to '+sc.version.toUpperCase()+'. Opening that page…');
+  location.href = sc.version+'.html';
+}
+
+(async()=>{ await guard(); })();
+</script>
+</body>
+</html>
