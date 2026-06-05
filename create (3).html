@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SENA — Create New Scenario</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{ --ink:#ED6A5A; --ink-soft:#3E8E96; --orange:#3E8E96; --orange-soft:#DCE4DC; --orange-line:#3E8E96; --green:#3E8E96; --red:#b03a2e; --paper:#f4f7f4; --line:#c4d2cc; --base:17px; }
+  *{box-sizing:border-box;}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);line-height:1.6;max-width:1040px;margin:0 auto;padding:0 24px 40px;background:var(--paper);font-size:var(--base);}
+  h1{font-size:28px;margin:18px 0 2px;color:var(--orange);} h3{font-size:17px;color:var(--ink-soft);}
+  .lede{color:#5a6573;font-size:16px;margin-top:4px;}
+  .menubar{position:sticky;top:0;background:#3E8E96;margin:0 -24px 14px;padding:11px 24px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;z-index:10;}
+  .menubar .brand{color:#fff;font-weight:bold;font-size:19px;margin-right:14px;}
+  .menubar a{font-family:inherit;font-size:14px;font-weight:bold;color:#eaf4f3;text-decoration:none;padding:7px 13px;border-radius:7px;}
+  .menubar a:hover{background:#2f6e74;color:#fff;} .menubar a.new{background:rgba(255,255,255,.18);color:#fff;}
+  .menubar .who{margin-left:auto;color:#9fb0c2;font-family:Arial,sans-serif;font-size:12.5px;} .menubar .who a{color:#cdd8e4;}
+  .row{font-family:Arial,sans-serif;font-size:14px;margin:10px 0;}
+  .row label{display:inline-block;width:130px;font-weight:bold;color:var(--ink-soft);vertical-align:top;}
+  .row input,.row select,.row textarea{font-family:Arial,sans-serif;font-size:14px;padding:7px 10px;border:1.5px solid var(--line);border-radius:6px;}
+  .row input,.row textarea{width:62%;} .namef{width:62%;}
+  .builder-wrap{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;}
+  .palette{flex:0 0 200px;background:#f6f3ea;border:2px solid var(--line);border-radius:8px;padding:12px;}
+  .palette h4{margin:4px 0 10px;font-family:Arial,sans-serif;font-size:14px;}
+  .pal-item{background:var(--orange-soft);border:2px solid var(--orange);border-radius:6px;padding:8px 10px;margin:7px 0;font-family:Arial,sans-serif;font-size:13.5px;font-weight:bold;color:var(--ink);cursor:grab;text-align:center;}
+  .pal-item.dec{background:#fff6e9;border-style:dashed;} .pal-item.term{background:#fbe4df;border-color:var(--red);color:var(--red);}
+  .canvas{flex:1;min-width:320px;min-height:340px;background:#fffdf8;border:2px dashed var(--orange);border-radius:8px;padding:14px;}
+  .canvas-empty{color:#b0a98f;font-family:Arial,sans-serif;text-align:center;margin-top:40px;font-size:15px;}
+  .cnode{background:var(--orange-soft);border:2.5px solid var(--orange);border-radius:8px;padding:8px 12px;margin:8px auto;max-width:440px;position:relative;}
+  .cnode.dec{background:#fff6e9;border-style:dashed;} .cnode.term{background:#fbe4df;border-color:var(--red);}
+  .cnode textarea{width:100%;border:none;background:transparent;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;color:var(--ink);text-align:center;resize:vertical;}
+  .cnode.term textarea{color:var(--red);}
+  .cnode .del{position:absolute;top:-9px;right:-9px;background:var(--red);color:#fff;border:none;border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:14px;line-height:1;}
+  .cn-arrow{text-align:center;color:var(--orange-line);font-weight:bold;font-size:22px;}
+  .btn{font-family:Arial,sans-serif;font-size:14px;font-weight:bold;padding:9px 16px;border-radius:6px;border:2px solid var(--ink);background:#fff;color:var(--ink);cursor:pointer;margin:4px 6px 4px 0;}
+  .btn.primary{background:var(--ink);color:#fff;} .btn.orange{background:var(--orange);color:#fff;border-color:var(--orange);}
+  textarea.jsonarea{width:100%;height:120px;font-family:"Courier New",monospace;font-size:12.5px;border:1.5px solid var(--line);border-radius:6px;padding:10px;}
+  .sect{background:#fff;border:1px solid var(--line);border-radius:8px;padding:16px 18px;margin:16px 0;}
+  .preview .farrow{text-align:center;color:var(--orange-line);font-weight:bold;font-size:20px;}
+  .fnode{display:block;max-width:480px;margin:6px auto;background:var(--orange-soft);border:2.5px solid var(--orange);border-radius:8px;padding:9px 14px;font-family:Arial,sans-serif;text-align:center;}
+  .fnode .t{color:var(--ink);font-weight:bold;font-size:15px;} .fnode.start{background:var(--ink);} .fnode.start .t{color:#fff;}
+  .fnode.decision{background:#fff6e9;border-style:dashed;} .fnode.terminal{background:#fbe4df;border-color:var(--red);} .fnode.terminal .t{color:var(--red);}
+</style>
+</head>
+<body>
+
+<div class="menubar">
+  <span class="brand">SENA</span>
+  <a href="demonstrator.html">Home</a><a href="v1.html">V1</a><a href="v2.html">V2</a><a href="v3.html">V3</a><a href="v4.html">V4</a>
+  <a href="create.html" class="new">＋ Create New</a><a href="bulk.html">Bulk</a>
+  <span class="who" id="who"></span>
+</div>
+
+<h1>Create New Scenario</h1>
+<p class="lede">Build a scenario by dragging components, or upload a JSON to render it as a diagram. Tag it to a version (V1–V4) and set its status. On save it appears on that version's page. Existing scenarios are never deleted — only hidden via "Removed".</p>
+
+<div class="sect">
+  <div class="row"><label>Scenario name</label><input class="namef" id="scenName" placeholder="e.g. Child crosses with the maid"></div>
+  <div class="row"><label>Situation</label><textarea id="scenSit" rows="2" placeholder="Describe the situation"></textarea></div>
+  <div class="row"><label>Assign to version</label>
+    <select id="scenVer"><option value="v1">V1 — Child Safety</option><option value="v2">V2 — Talking SENA</option><option value="v3">V3 — Supervision</option><option value="v4">V4 — Identity</option></select></div>
+  <div class="row"><label>Status</label>
+    <select id="scenPrio"><option value="undecided">Not decided</option><option value="delayed">Delayed</option><option value="deferred">Deferred</option><option value="confirmed">Confirmed (admin only)</option><option value="removed">Removed (hidden)</option></select></div>
+  <div class="row"><label>Outcome</label><input id="scenOut" placeholder="e.g. CONFIRMED ALERT"></div>
+  <div class="row"><label>Why (reasoning)</label><textarea id="scenWhy" rows="2" placeholder="Why this outcome"></textarea></div>
+</div>
+
+<div class="sect">
+  <h3>Upload or paste scenario JSON → render as diagram</h3>
+  <p class="lede">Scenarios are authored as JSON (see the SENA Scenario JSON Standard — you can generate them with ChatGPT). Upload or paste, the fields above auto-fill, and the branching diagram renders below. Then Save.</p>
+  <input type="file" id="jsonFile" accept="application/json,.json" onchange="uploadJson(event)">
+  <button class="btn alt" onclick="document.getElementById('pasteWrap').style.display='block'">Or paste JSON</button>
+  <div id="pasteWrap" style="display:none;margin-top:10px;">
+    <textarea class="jsonarea" id="pasteJson" placeholder="Paste scenario JSON here..."></textarea>
+    <button class="btn" onclick="loadPasted()">Render this JSON</button>
+  </div>
+  <div class="preview" id="preview" style="margin-top:14px;"></div>
+</div>
+
+<div class="sect">
+  <button class="btn primary" onclick="saveScenario()">Save scenario to its version page</button>
+  <button class="btn orange" onclick="exportJson()">Export diagram → JSON</button>
+  <button class="btn" onclick="clearAll()">Clear</button>
+  <textarea class="jsonarea" id="exportArea" style="display:none;margin-top:10px;" readonly></textarea>
+</div>
+
+<script>
+const SUPABASE_URL="https://bzwdvdbmpurqqpntrcio.supabase.co";
+const SUPABASE_KEY="sb_publishable_6YrFzgL6-Whlft8lofg5Nw_jxIsPz_t";
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+let isAdmin=false,currentUserId=null;
+// ===== Path 1 branching tree renderer v2 (auto-height + layer legend) =====
+const NW=200, VGAP=54, LH=17, NPAD=20;
+const LAYER_COLORS={conversation:'#3E8E96',safety:'#ED6A5A',fallback:'#F4B400',system:'#9fb0a6'};
+const LAYER_NAME={conversation:'Conversation (configurable)',safety:'Safety (deterministic)',fallback:'Fallback (future)',system:'System'};
+function _wrapLines(t){const words=(t||'').split(/\s+/);const lines=[];let cur='';
+  words.forEach(w=>{if((cur+' '+w).trim().length>28){if(cur)lines.push(cur);cur=w;}else cur=(cur+' '+w).trim();});if(cur)lines.push(cur);return lines.length?lines:[''];}
+function _measure(node){
+  if(!node) return 0;
+  node._kids=[];
+  if(node.type==='decision'){ if(node.yes)node._kids.push(['yes',node.yes]); if(node.no)node._kids.push(['no',node.no]); }
+  else if(node.next){ node._kids.push([null,node.next]); }
+  node._lines=_wrapLines(node.t); node._h=Math.max(46, node._lines.length*LH+NPAD);
+  if(node._kids.length===0){ node._w=NW+34; return node._w; }
+  let w=0; node._kids.forEach(([,k])=>w+=_measure(k));
+  node._w=Math.max(NW+34,w); return node._w;
+}
+function _place(node,xLeft,yTop,acc){
+  node._cx=xLeft+node._w/2; node._cy=yTop+node._h/2; acc.push(node);
+  const childTop=yTop+node._h+VGAP;
+  let cx=xLeft; node._kids.forEach(([b,k])=>{ k._branch=b; _place(k,cx,childTop,acc); cx+=k._w; });
+}
+function treeSVG(root){
+  if(!root||!root.type) return '<p style="font-family:Arial;color:#888">No diagram.</p>';
+  const E=s=>(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  _measure(root); const nodes=[]; _place(root,0,20,nodes);
+  const totalW=root._w+20; let maxB=0; nodes.forEach(n=>{const b=n._cy+n._h/2;if(b>maxB)maxB=b;});
+  const totalH=maxB+20;
+  // legend (only layers actually used)
+  const used=[...new Set(nodes.map(n=>n.layer).filter(l=>l&&LAYER_COLORS[l]))];
+  let legend='';
+  if(used.length){ let lx=8; legend='<g font-family="Arial" font-size="11">';
+    used.forEach(l=>{ legend+='<rect x="'+lx+'" y="2" width="11" height="11" rx="2" fill="'+LAYER_COLORS[l]+'"/>'+
+      '<text x="'+(lx+15)+'" y="11" fill="#555">'+E(LAYER_NAME[l])+'</text>'; lx+=15+ (LAYER_NAME[l].length*6.0)+18; });
+    legend+='</g>'; }
+  const legendH=used.length?20:0;
+  let svg='<svg viewBox="0 -'+legendH+' '+totalW+' '+(totalH+legendH)+'" width="100%" style="min-width:'+Math.min(totalW,1600)+'px" xmlns="http://www.w3.org/2000/svg" font-family="Arial">';
+  svg+='<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1 L9 5 L1 9" fill="none" stroke="#3E8E96" stroke-width="1.7"/></marker></defs>';
+  svg+=legend;
+  // edges
+  nodes.forEach(n=>{(n._kids||[]).forEach(([b,k])=>{
+    const x1=n._cx,y1=n._cy+n._h/2,x2=k._cx,y2=k._cy-k._h/2,midY=(y1+y2)/2;
+    svg+='<path d="M'+x1+','+y1+' L'+x1+','+midY+' L'+x2+','+midY+' L'+x2+','+y2+'" fill="none" stroke="#3E8E96" stroke-width="1.8" marker-end="url(#ah)"/>';
+    if(b){ const lbl=b==='yes'?(n.yesLabel||'YES'):(n.noLabel||'NO');
+      svg+='<rect x="'+(x1+(x2>x1?6:-46))+'" y="'+(midY-9)+'" width="40" height="16" rx="3" fill="#F3EAA0"/>'+
+      '<text x="'+(x1+(x2>x1?26:-26))+'" y="'+(midY+3)+'" text-anchor="middle" font-size="11" font-weight="bold" fill="#7a6a1a">'+E(lbl)+'</text>'; }
+  });});
+  // nodes
+  nodes.forEach(n=>{
+    const x=n._cx-NW/2,y=n._cy-n._h/2,h=n._h;
+    const isStart=n.type==='start',isTerm=n.type==='terminal',isDec=n.type==='decision',isAlert=n.alert;
+    let fill,stroke,tcol;
+    if(isStart){fill='#3E8E96';stroke='#2f6e74';tcol='#fff';}
+    else if(isTerm){fill=isAlert?'#ED6A5A':'#DCE4DC';stroke=isAlert?'#c94e3f':'#9fb0a6';tcol=isAlert?'#fff':'#2b3a3a';}
+    else if(isDec){fill='#fff';stroke='#3E8E96';tcol='#2b3a3a';}
+    else {fill='#A8CFC9';stroke='#3E8E96';tcol='#2b3a3a';}
+    const rx=(isStart||isTerm)?Math.min(h/2,26):8;
+    svg+='<rect x="'+x+'" y="'+y+'" width="'+NW+'" height="'+h+'" rx="'+rx+'" fill="'+fill+'" stroke="'+stroke+'" stroke-width="2.5"/>';
+    // layer = subtle left stripe (not a confusing bottom bar)
+    if(n.layer&&LAYER_COLORS[n.layer]){ svg+='<rect x="'+x+'" y="'+(y+6)+'" width="5" height="'+(h-12)+'" rx="2.5" fill="'+LAYER_COLORS[n.layer]+'"/>'; }
+    // decision corner diamond marker
+    if(isDec){const dx=x+13,dy=y+13,s=6;svg+='<polygon points="'+dx+','+(dy-s)+' '+(dx+s)+','+dy+' '+dx+','+(dy+s)+' '+(dx-s)+','+dy+'" fill="#3E8E96"/>';}
+    const sy=n._cy-((n._lines.length-1)*(LH/2));
+    n._lines.forEach((ln,i)=>svg+='<text x="'+n._cx+'" y="'+(sy+i*LH+4)+'" text-anchor="middle" font-size="13" font-weight="bold" fill="'+tcol+'">'+E(ln)+'</text>');
+  });
+  return svg+'</svg>';
+}
+
+
+function linearToTree(nodes){
+  if(!nodes||!nodes.length) return null;
+  // chain linear nodes via .next; decisions in linear data just continue (no real branch)
+  let root=null,prev=null;
+  nodes.forEach(n=>{ const node={type:n.type||'step',t:n.t,_s:n.s};
+    if(n.s) node.yesLabel=n.s;
+    if(!root){root=node;} else { prev.next=node; }
+    prev=node; });
+  return root;
+}
+
+
+function getTok(){let t=localStorage.getItem('sena_device_token');if(!t){t='dev_'+crypto.randomUUID();localStorage.setItem('sena_device_token',t);}return t;}
+function bounce(m){document.body.innerHTML='<div style="font-family:Arial;max-width:520px;margin:80px auto;padding:30px;background:#fdf0ee;border:2px solid #b03a2e;border-radius:12px;color:#8a2a1c;text-align:center;"><h2>🚫 Sign-in required</h2><p>'+m+'</p><a href="index.html" style="display:inline-block;margin-top:10px;background:#16243a;color:#fff;padding:11px 22px;border-radius:8px;text-decoration:none;font-weight:bold;">Go to sign in</a></div>';}
+function esc(s){return (s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+async function guard(){
+  const { data:{ session } }=await sb.auth.getSession();
+  if(!session){ bounce('You are not signed in.'); return false; }
+  currentUserId=session.user.id; const myTok=getTok(); let prof;
+  try{ const r=await sb.from('profiles').select('approved,is_admin,bound_device_id,email').eq('id',currentUserId).single(); prof=r.data; }
+  catch(e){ bounce('Could not verify your account.'); return false; }
+  if(!prof||!prof.approved){ bounce('Your access is not approved.'); return false; }
+  if(prof.bound_device_id && prof.bound_device_id!==myTok){ await sb.auth.signOut(); bounce('This account is locked to another browser/device.'); return false; }
+  isAdmin=!!prof.is_admin;
+  {const w=document.getElementById('who');w.textContent=prof.email+(isAdmin?' · ADMIN':'')+'  ';const a=document.createElement('a');a.href='#';a.textContent='sign out';a.onclick=so;w.appendChild(a);}
+  return true;
+}
+async function so(){ await sb.auth.signOut(); location.href='index.html'; }
+
+// ---- drag builder ----
+
+// ---- JSON upload → diagram ----
+function uploadJson(e){const f=e.target.files[0];if(!f)return;
+  if(f.size > 512*1024){ alert('File too large (max 512 KB). A scenario JSON should be tiny.'); e.target.value=''; return; }
+  const r=new FileReader();r.onload=()=>applyJson(r.result);r.readAsText(f);}
+function loadPasted(){applyJson(document.getElementById('pasteJson').value);}
+let __tree=null;  // holds an imported branching tree (root node), if any
+function sanitizeTree(node,depth){
+  if(!node||typeof node!=='object'||depth>60) return null;
+  const allowedTypes=['start','decision','step','io','terminal'];
+  const S=v=>typeof v==='string'?v.slice(0,2000):'';
+  const out={ type: allowedTypes.includes(node.type)?node.type:'step', t:S(node.t) };
+  if(node.alert===true) out.alert=true;
+  if(node.yesLabel) out.yesLabel=S(node.yesLabel);
+  if(node.noLabel) out.noLabel=S(node.noLabel);
+  if(node.type==='decision'){
+    if(node.yes) out.yes=sanitizeTree(node.yes,depth+1);
+    if(node.no)  out.no =sanitizeTree(node.no,depth+1);
+  } else if(node.next){ out.next=sanitizeTree(node.next,depth+1); }
+  return out;
+}
+function applyJson(text){
+  let obj; try{ obj=JSON.parse(text); }catch(err){ alert('Invalid JSON: '+err.message); return; }
+  let sc;
+  if(obj.type==='sena_v1_full_export' && Array.isArray(obj.scenarios)){
+    if(obj.scenarios.length===0){ alert('Full export has no scenarios.'); return; }
+    sc=obj.scenarios[0]; if(obj.scenarios.length>1) alert('Full export has '+obj.scenarios.length+' scenarios; loading the first.');
+  } else { sc=obj.scenario||obj; }
+  if(typeof sc!=='object'||sc===null){ alert('JSON is not a scenario object.'); return; }
+  const allowedVer=['v1','v2','v3','v4'], allowedPrio=['confirmed','delayed','undecided','deferred','removed'];
+  const S=v=>typeof v==='string'?v.slice(0,2000):'';
+  document.getElementById('scenName').value=S(sc.name);
+  document.getElementById('scenSit').value=S(sc.situation);
+  document.getElementById('scenOut').value=S(sc.outcome);
+  document.getElementById('scenWhy').value=S(sc.why);
+  document.getElementById('scenVer').value=allowedVer.includes(sc.version)?sc.version:'v1';
+  document.getElementById('scenPrio').value=allowedPrio.includes(sc.priority)?sc.priority:'undecided';
+  __tree=null;
+  if(sc.root){
+    // BRANCHING tree format
+    __tree=sanitizeTree(sc.root,0);
+    renderTreePreview(__tree);
+    alert('Branching scenario loaded. Review the preview, set version/status, then Save.');
+  } else {
+    // LINEAR nodes format — convert to a tree so it renders + saves uniformly
+    const allowedTypes=['start','decision','step','io','terminal'];
+    const nodes=Array.isArray(sc.nodes)?sc.nodes.slice(0,40).map(n=>({type:allowedTypes.includes(n&&n.type)?n.type:'step',t:S(n&&n.t),s:S(n&&n.s)})):[];
+    __tree=linearToTree(nodes);
+    renderTreePreview(__tree);
+    alert('Scenario loaded (linear, converted to tree). Review the preview, set version/status, then Save.');
+  }
+}
+function renderTreePreview(root){ const pv=document.getElementById('preview'); pv.innerHTML='<h3>Diagram preview</h3>'+treeSVG(root); }
+function renderPreview(nodes){
+  const pv=document.getElementById('preview');
+  if(!nodes||!nodes.length){pv.innerHTML='';return;}
+  pv.innerHTML='<h3>Diagram preview</h3>'+treeSVG(linearToTree(nodes));
+}
+
+// ---- diagram → JSON export ----
+function buildObj(){
+  const o={ name:document.getElementById('scenName').value||'Untitled',
+    situation:document.getElementById('scenSit').value||'',
+    version:document.getElementById('scenVer').value,
+    priority:document.getElementById('scenPrio').value,
+    outcome:document.getElementById('scenOut').value||'',
+    outcomeClass:'oc-alert', why:document.getElementById('scenWhy').value||'',
+    comment:'' };
+  if(__tree) o.root=__tree;   // branching tree, if one was imported
+  return o;
+}
+function exportJson(){ const a=document.getElementById('exportArea'); a.style.display='block'; a.value=JSON.stringify({type:__tree?'sena_scenario_tree':'sena_scenario_v1',schemaVersion:__tree?2:1,scenario:buildObj()},null,2); a.select(); }
+function clearAll(){ ['scenName','scenSit','scenOut','scenWhy'].forEach(id=>document.getElementById(id).value=''); __tree=null; document.getElementById('preview').innerHTML=''; }
+
+// ---- BRANCHING TREE BUILDER (option C) ----
+function tbInit(){
+  __tree={type:'start',t:'Start / Detection',layer:'system'};
+  tbRender();
+}
+function tbNode(node,branchPath){
+  // returns HTML for one node with its editable fields + add buttons + recursive children
+  const id=branchPath.join('-')||'root';
+  const types=['start','decision','step','io','terminal'];
+  const layers=['','conversation','safety','fallback','system'];
+  let h='<div style="border:1.5px solid #c4d2cc;border-radius:8px;padding:8px 10px;margin:6px 0 6px '+(branchPath.length*18)+'px;background:#fff;">';
+  h+='<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-family:Arial;font-size:13px;">';
+  h+='<select onchange="tbSet(\''+id+'\',\'type\',this.value)">'+types.map(t=>'<option'+(node.type===t?' selected':'')+'>'+t+'</option>').join('')+'</select>';
+  h+='<input value="'+(node.t||'').replace(/"/g,'&quot;')+'" oninput="tbSet(\''+id+'\',\'t\',this.value)" placeholder="text" style="flex:1;min-width:180px;padding:4px 7px;border:1px solid #c4d2cc;border-radius:5px;">';
+  h+='<select onchange="tbSet(\''+id+'\',\'layer\',this.value)" title="layer">'+layers.map(l=>'<option value="'+l+'"'+(node.layer===l?' selected':'')+'>'+(l||'(layer)')+'</option>').join('')+'</select>';
+  if(node.type==='terminal') h+='<label style="font-size:12px;"><input type="checkbox" '+(node.alert?'checked':'')+' onchange="tbSet(\''+id+'\',\'alert\',this.checked)">alert</label>';
+  if(branchPath.length>0) h+='<button class="btn" style="margin:0;padding:2px 8px;background:#b03a2e;border-color:#b03a2e;color:#fff;" onclick="tbDel(\''+id+'\')">×</button>';
+  h+='</div>';
+  // add-child controls
+  h+='<div style="margin-top:5px;font-family:Arial;font-size:12px;">';
+  if(node.type==='decision'){
+    if(!node.yes) h+='<button class="btn alt" style="margin:2px;padding:3px 9px;" onclick="tbAdd(\''+id+'\',\'yes\')">+ YES child</button>';
+    if(!node.no)  h+='<button class="btn alt" style="margin:2px;padding:3px 9px;" onclick="tbAdd(\''+id+'\',\'no\')">+ NO child</button>';
+  } else if(node.type!=='terminal'){
+    if(!node.next) h+='<button class="btn alt" style="margin:2px;padding:3px 9px;" onclick="tbAdd(\''+id+'\',\'next\')">+ next</button>';
+  }
+  h+='</div>';
+  // children
+  if(node.type==='decision'){
+    if(node.yes){ h+='<div style="font-family:Arial;font-size:11px;color:#2f6e74;margin-left:'+((branchPath.length+1)*18)+'px;font-weight:bold;">YES ↓</div>'+tbNode(node.yes,branchPath.concat('yes')); }
+    if(node.no){ h+='<div style="font-family:Arial;font-size:11px;color:#b03a2e;margin-left:'+((branchPath.length+1)*18)+'px;font-weight:bold;">NO ↓</div>'+tbNode(node.no,branchPath.concat('no')); }
+  } else if(node.next){ h+=tbNode(node.next,branchPath.concat('next')); }
+  h+='</div>';
+  return h;
+}
+function tbResolve(path){ // path like 'root' or 'yes-no-next'
+  if(path==='root') return {parent:null,key:null,node:__tree};
+  const parts=path.split('-'); let node=__tree,parent=null,key=null;
+  for(const p of parts){ parent=node; key=p; node=node[p]; }
+  return {parent,key,node};
+}
+function tbSet(path,field,val){
+  const {node}=tbResolve(path); if(!node)return;
+  if(field==='alert'){ if(val)node.alert=true; else delete node.alert; }
+  else if(field==='layer'){ if(val)node.layer=val; else delete node.layer; }
+  else node[field]=val;
+  if(field==='type') tbRender(); // type change may add/remove child options
+}
+function tbAdd(path,branch){
+  const {node}=tbResolve(path); if(!node)return;
+  node[branch]={type:branch==='no'?'terminal':'step',t:branch==='yes'?'YES path':branch==='no'?'NO path':'Next step'};
+  tbRender();
+}
+function tbDel(path){
+  const {parent,key}=tbResolve(path); if(parent&&key){ delete parent[key]; tbRender(); }
+}
+function tbRender(){
+  if(!__tree){ document.getElementById('treeBuilder').innerHTML=''; return; }
+  document.getElementById('treeBuilder').innerHTML=tbNode(__tree,[]);
+  document.getElementById('tbNote').textContent='Tree active — Save/Export will use this branching tree.';
+  tbToPreview();
+}
+function tbToPreview(){ if(__tree) document.getElementById('preview').innerHTML='<h3>Diagram preview (branching)</h3>'+treeSVG(__tree); }
+
+
+async function saveScenario(){
+  const sc=buildObj();
+  if(!sc.name||sc.name==='Untitled'){ alert('Give the scenario a name.'); return; }
+  if(!__tree){ alert('Upload or paste scenario JSON first.'); return; }
+  if(sc.priority==='confirmed' && !isAdmin){ alert('Only the admin can set a scenario to Confirmed.'); return; }
+  const { error } = await sb.from('scenarios').insert({ data:sc, version:sc.version, priority:sc.priority, created_by:currentUserId, last_edited_by:currentUserId });
+  if(error){ alert('Save failed: '+error.message); return; }
+  await sb.rpc('log_audit',{p_action:'created scenario',p_detail:sc.name+' ('+sc.version+')' });
+  alert('Saved to '+sc.version.toUpperCase()+'. Opening that page…');
+  location.href = sc.version+'.html';
+}
+
+(async()=>{ await guard(); })();
+</script>
+</body>
+</html>
