@@ -41,9 +41,30 @@
   .fnode{display:block;max-width:480px;margin:6px auto;background:var(--orange-soft);border:2.5px solid var(--orange);border-radius:8px;padding:9px 14px;font-family:Arial,sans-serif;text-align:center;}
   .fnode .t{color:var(--ink);font-weight:bold;font-size:15px;} .fnode.start{background:var(--ink);} .fnode.start .t{color:#fff;}
   .fnode.decision{background:#fff6e9;border-style:dashed;} .fnode.terminal{background:#fbe4df;border-color:var(--red);} .fnode.terminal .t{color:var(--red);}
+  /* custom notifier */
+  #toastWrap{position:fixed;top:16px;right:16px;z-index:9999;display:flex;flex-direction:column;gap:8px;max-width:360px;}
+  .toast{font-family:inherit;font-size:14px;padding:12px 14px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.18);color:#fff;display:flex;gap:10px;align-items:flex-start;animation:slidein .25s ease;}
+  .toast.ok{background:#2a7a2a;} .toast.warn{background:#d99000;} .toast.err{background:#b03a2e;} .toast.info{background:#3E8E96;}
+  .toast .x{margin-left:auto;cursor:pointer;font-weight:bold;opacity:.8;}
+  @keyframes slidein{from{transform:translateX(30px);opacity:0;}to{transform:none;opacity:1;}}
+  #modalBack{display:none;position:fixed;inset:0;background:rgba(20,30,30,.45);z-index:9998;align-items:center;justify-content:center;}
+  #modalBack.show{display:flex;}
+  .modal{background:#fff;border-radius:12px;max-width:440px;width:90%;padding:22px;box-shadow:0 10px 40px rgba(0,0,0,.3);font-family:inherit;}
+  .modal h3{margin:0 0 8px;color:#2b3a3a;} .modal p{font-size:14px;color:#444;}
+  .modal .acts{margin-top:16px;text-align:right;}
+  .modal button{font-family:inherit;font-weight:bold;padding:9px 16px;border-radius:7px;border:2px solid #3E8E96;cursor:pointer;margin-left:8px;}
+  .modal .go{background:#3E8E96;color:#fff;} .modal .cancel{background:#fff;color:#3E8E96;}
+  /* review panel */
+  .review{background:#fff;border:1px solid var(--line);border-radius:8px;padding:14px 16px;margin-top:14px;font-family:inherit;}
+  .review h4{margin:6px 0;color:var(--ink);} .rv-ok{color:#2a7a2a;font-weight:bold;} .rv-warn{color:#b35900;font-weight:bold;}
+  .review ul{margin:6px 0;padding-left:20px;font-size:14px;} .review li{margin:3px 0;}
+  .walk{font-family:"Courier New",monospace;font-size:13px;white-space:pre-wrap;background:#f6f9f8;border-radius:6px;padding:10px;line-height:1.5;}
+  .cov{font-size:13.5px;color:#444;} .cov b{color:var(--ink);}
 </style>
 </head>
 <body>
+<div id="toastWrap"></div>
+<div id="modalBack"><div class="modal"><h3 id="mTitle"></h3><p id="mBody"></p><div class="acts"><button class="cancel" id="mCancel">Cancel</button><button class="go" id="mGo">OK</button></div></div></div>
 
 <div class="menubar">
   <span class="brand">SENA</span>
@@ -76,6 +97,7 @@
     <button class="btn" onclick="loadPasted()">Render this JSON</button>
   </div>
   <div class="preview" id="preview" style="margin-top:14px;"></div>
+  <div class="review" id="review" style="display:none;"></div>
 </div>
 
 <div class="sect">
@@ -86,6 +108,22 @@
 </div>
 
 <script>
+// ===== custom notifier (replaces alert/confirm) =====
+function toast(msg,type){ type=type||'info';
+  const w=document.getElementById('toastWrap');
+  const t=document.createElement('div'); t.className='toast '+type;
+  const s=document.createElement('span'); s.textContent=msg; t.appendChild(s);
+  const x=document.createElement('span'); x.className='x'; x.textContent='✕'; x.onclick=()=>t.remove(); t.appendChild(x);
+  w.appendChild(t); setTimeout(()=>{ t.style.opacity='0'; setTimeout(()=>t.remove(),300); }, type==='err'?7000:4500);
+}
+function confirmModal(title,body,onGo){
+  document.getElementById('mTitle').textContent=title;
+  document.getElementById('mBody').textContent=body;
+  const back=document.getElementById('modalBack'); back.classList.add('show');
+  const go=document.getElementById('mGo'), cancel=document.getElementById('mCancel');
+  const close=()=>back.classList.remove('show');
+  go.onclick=()=>{ close(); onGo(); }; cancel.onclick=close;
+}
 const SUPABASE_URL="https://bzwdvdbmpurqqpntrcio.supabase.co";
 const SUPABASE_KEY="sb_publishable_6YrFzgL6-Whlft8lofg5Nw_jxIsPz_t";
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
@@ -111,7 +149,14 @@ function _place(node,xLeft,yTop,acc){
   const childTop=yTop+node._h+VGAP;
   let cx=xLeft; node._kids.forEach(([b,k])=>{ k._branch=b; _place(k,cx,childTop,acc); cx+=k._w; });
 }
-function treeSVG(root){
+function stripTree(node){ if(!node||typeof node!=='object') return node;
+  const keep={}; ['type','t','layer','yesLabel','noLabel','alert'].forEach(k=>{ if(node[k]!==undefined) keep[k]=node[k]; });
+  if(node.yes) keep.yes=stripTree(node.yes);
+  if(node.no) keep.no=stripTree(node.no);
+  if(node.next) keep.next=stripTree(node.next);
+  return keep; }
+function treeSVG(rootIn){
+  var root = rootIn ? stripTree(rootIn) : rootIn;
   if(!root||!root.type) return '<p style="font-family:Arial;color:#888">No diagram.</p>';
   const E=s=>(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   _measure(root); const nodes=[]; _place(root,0,20,nodes);
@@ -192,7 +237,7 @@ async function so(){ await sb.auth.signOut(); location.href='index.html'; }
 
 // ---- JSON upload → diagram ----
 function uploadJson(e){const f=e.target.files[0];if(!f)return;
-  if(f.size > 512*1024){ alert('File too large (max 512 KB). A scenario JSON should be tiny.'); e.target.value=''; return; }
+  if(f.size > 512*1024){ toast('File too large (max 512 KB).','err'); e.target.value=''; return; }
   const r=new FileReader();r.onload=()=>applyJson(r.result);r.readAsText(f);}
 function loadPasted(){applyJson(document.getElementById('pasteJson').value);}
 let __tree=null;  // holds an imported branching tree (root node), if any
@@ -211,13 +256,13 @@ function sanitizeTree(node,depth){
   return out;
 }
 function applyJson(text){
-  let obj; try{ obj=JSON.parse(text); }catch(err){ alert('Invalid JSON: '+err.message); return; }
+  let obj; try{ obj=JSON.parse(text); }catch(err){ toast('Invalid JSON: '+err.message,'err'); return; }
   let sc;
   if(obj.type==='sena_v1_full_export' && Array.isArray(obj.scenarios)){
-    if(obj.scenarios.length===0){ alert('Full export has no scenarios.'); return; }
-    sc=obj.scenarios[0]; if(obj.scenarios.length>1) alert('Full export has '+obj.scenarios.length+' scenarios; loading the first.');
+    if(obj.scenarios.length===0){ toast('Full export has no scenarios.','err'); return; }
+    sc=obj.scenarios[0]; if(obj.scenarios.length>1) toast('Full export has '+obj.scenarios.length+' scenarios; loading the first.','warn');
   } else { sc=obj.scenario||obj; }
-  if(typeof sc!=='object'||sc===null){ alert('JSON is not a scenario object.'); return; }
+  if(typeof sc!=='object'||sc===null){ toast('JSON is not a scenario object.','err'); return; }
   const allowedVer=['v1','v2','v3','v4'], allowedPrio=['confirmed','delayed','undecided','deferred','removed'];
   const S=v=>typeof v==='string'?v.slice(0,2000):'';
   document.getElementById('scenName').value=S(sc.name);
@@ -231,17 +276,74 @@ function applyJson(text){
     // BRANCHING tree format
     __tree=sanitizeTree(sc.root,0);
     renderTreePreview(__tree);
-    alert('Branching scenario loaded. Review the preview, set version/status, then Save.');
+    toast('Branching scenario loaded. Review below, then Save.','ok'); buildReview();
   } else {
     // LINEAR nodes format — convert to a tree so it renders + saves uniformly
     const allowedTypes=['start','decision','step','io','terminal'];
     const nodes=Array.isArray(sc.nodes)?sc.nodes.slice(0,40).map(n=>({type:allowedTypes.includes(n&&n.type)?n.type:'step',t:S(n&&n.t),s:S(n&&n.s)})):[];
     __tree=linearToTree(nodes);
     renderTreePreview(__tree);
-    alert('Scenario loaded (linear, converted to tree). Review the preview, set version/status, then Save.');
+    toast('Scenario loaded (converted to tree). Review below, then Save.','ok'); buildReview();
   }
 }
 function renderTreePreview(root){ const pv=document.getElementById('preview'); pv.innerHTML='<h3>Diagram preview</h3>'+treeSVG(root); }
+
+// ===== Review: structural validator + plain-English walkthrough + coverage =====
+function reviewIssues(root){
+  const issues=[];
+  if(!root){ return ['No diagram loaded.']; }
+  if(root.type!=='start') issues.push('Root node is not a "start" node.');
+  let starts=0, terminals=0, alerts=0, noalerts=0, decisions=0;
+  (function walk(n,path){
+    if(!n||typeof n!=='object') return;
+    if(!n.t || !n.t.trim()) issues.push('A node has empty text'+(path?' ('+path+')':'')+'.');
+    if(n.type==='start') starts++;
+    if(n.type==='decision'){ decisions++;
+      if(!n.yes) issues.push('Decision "'+(n.t||'?')+'" is missing a YES branch.');
+      if(!n.no)  issues.push('Decision "'+(n.t||'?')+'" is missing a NO branch.');
+      walk(n.yes,'YES of '+(n.t||'?')); walk(n.no,'NO of '+(n.t||'?'));
+    } else if(n.type==='terminal'){ terminals++; if(n.alert)alerts++; else noalerts++;
+      if(n.yes||n.no||n.next) issues.push('Terminal "'+(n.t||'?')+'" should not have children.');
+    } else {
+      if(!n.next) issues.push('Node "'+(n.t||'?')+'" ('+n.type+') has no next step and is not a terminal (dead-end).');
+      walk(n.next, n.t);
+    }
+  })(root,'');
+  if(starts!==1) issues.push('Expected exactly 1 start node, found '+starts+'.');
+  if(terminals===0) issues.push('No terminal (outcome) nodes — the flow never ends.');
+  return issues;
+}
+function walkthrough(root){
+  const lines=[];
+  (function walk(n,depth,label){
+    if(!n) return;
+    const pad='  '.repeat(depth);
+    const tag = n.type==='terminal' ? (n.alert?'[ALERT] ':'[no alert] ') : n.type==='decision' ? '? ' : '• ';
+    lines.push(pad+(label?('→ '+label+': '):'')+tag+(n.t||''));
+    if(n.type==='decision'){ walk(n.yes,depth+1,(n.yesLabel||'YES')); walk(n.no,depth+1,(n.noLabel||'NO')); }
+    else if(n.next){ walk(n.next,depth,''); }
+  })(root,0,'');
+  return lines.join('\n');
+}
+function coverage(root){
+  let d=0,t=0,a=0,na=0; const layers=new Set();
+  (function walk(n){ if(!n)return; if(n.layer)layers.add(n.layer);
+    if(n.type==='decision'){d++;walk(n.yes);walk(n.no);}
+    else if(n.type==='terminal'){t++; if(n.alert)a++; else na++;}
+    else walk(n.next); })(root);
+  return {decisions:d,terminals:t,alerts:a,noalerts:na,layers:[...layers]};
+}
+function buildReview(){
+  const root=__tree; const rv=document.getElementById('review'); if(!root){ rv.style.display='none'; return; }
+  const issues=reviewIssues(root); const cov=coverage(root);
+  let h='<h4>Review</h4>';
+  if(issues.length===0){ h+='<p class="rv-ok">✓ No structural issues found.</p>'; }
+  else { h+='<p class="rv-warn">⚠ '+issues.length+' structural issue(s) — review before saving:</p><ul>'+issues.map(i=>'<li>'+i.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))+'</li>').join('')+'</ul>'; }
+  h+='<h4>Plain-English walkthrough</h4><div class="walk">'+walkthrough(root).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))+'</div>';
+  h+='<h4>Coverage</h4><p class="cov"><b>'+cov.decisions+'</b> decisions · <b>'+cov.terminals+'</b> outcomes ('+cov.alerts+' alert, '+cov.noalerts+' no-alert) · layers: '+(cov.layers.join(', ')||'none')+'</p>';
+  rv.innerHTML=h; rv.style.display='block';
+  return issues;
+}
 function renderPreview(nodes){
   const pv=document.getElementById('preview');
   if(!nodes||!nodes.length){pv.innerHTML='';return;}
@@ -257,7 +359,7 @@ function buildObj(){
     outcome:document.getElementById('scenOut').value||'',
     outcomeClass:'oc-alert', why:document.getElementById('scenWhy').value||'',
     comment:'' };
-  if(__tree) o.root=__tree;   // branching tree, if one was imported
+  if(__tree) o.root=stripTree(__tree);   // clean tree (no internal layout fields)
   return o;
 }
 function exportJson(){ const a=document.getElementById('exportArea'); a.style.display='block'; a.value=JSON.stringify({type:__tree?'sena_scenario_tree':'sena_scenario_v1',schemaVersion:__tree?2:1,scenario:buildObj()},null,2); a.select(); }
@@ -330,14 +432,22 @@ function tbToPreview(){ if(__tree) document.getElementById('preview').innerHTML=
 
 async function saveScenario(){
   const sc=buildObj();
-  if(!sc.name||sc.name==='Untitled'){ alert('Give the scenario a name.'); return; }
-  if(!__tree){ alert('Upload or paste scenario JSON first.'); return; }
-  if(sc.priority==='confirmed' && !isAdmin){ alert('Only the admin can set a scenario to Confirmed.'); return; }
+  if(!sc.name||sc.name==='Untitled'){ toast('Give the scenario a name.','warn'); return; }
+  if(!__tree){ toast('Upload or paste scenario JSON first.','warn'); return; }
+  if(sc.priority==='confirmed' && !isAdmin){ toast('Only the admin can set Confirmed.','warn'); return; }
+  const issues=reviewIssues(__tree);
+  if(issues.length>0){
+    confirmModal('Save with '+issues.length+' issue(s)?',
+      'The review found '+issues.length+' structural issue(s). You can still save (warn-and-allow), but consider fixing them first. Save anyway?',
+      ()=>doSave(sc));
+  } else { doSave(sc); }
+}
+async function doSave(sc){
   const { error } = await sb.from('scenarios').insert({ data:sc, version:sc.version, priority:sc.priority, created_by:currentUserId, last_edited_by:currentUserId });
-  if(error){ alert('Save failed: '+error.message); return; }
+  if(error){ toast('Save failed: '+error.message,'err'); return; }
   await sb.rpc('log_audit',{p_action:'created scenario',p_detail:sc.name+' ('+sc.version+')' });
-  alert('Saved to '+sc.version.toUpperCase()+'. Opening that page…');
-  location.href = sc.version+'.html';
+  toast('Saved to '+sc.version.toUpperCase()+'. Opening…','ok');
+  setTimeout(()=>{ location.href = sc.version+'.html'; }, 900);
 }
 
 (async()=>{ await guard(); })();
