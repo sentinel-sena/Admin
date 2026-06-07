@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SENA — Create New Scenario</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   :root{ --ink:#16243a; --ink-soft:#2d4a6b; --orange:#e07b1a; --orange-soft:#fdf0e0; --orange-line:#e8943f; --green:#2a7a2a; --red:#b03a2e; --paper:#fbfaf7; --line:#d9d6cc; --base:17px; }
   *{box-sizing:border-box;}
@@ -20,6 +21,12 @@
   .row label{display:inline-block;width:130px;font-weight:bold;color:var(--ink-soft);vertical-align:top;}
   .row input,.row select,.row textarea{font-family:Arial,sans-serif;font-size:14px;padding:7px 10px;border:1.5px solid var(--line);border-radius:6px;}
   .row input,.row textarea{width:62%;} .namef{width:62%;}
+  /* multi-version chips (locked theme tokens only) */
+  .verchips{display:inline-flex;gap:8px;flex-wrap:wrap;vertical-align:top;}
+  .verchip{font-family:Arial,sans-serif;font-size:13.5px;display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border:1.5px solid var(--line);border-radius:14px;background:#fff;color:var(--ink-soft);cursor:pointer;user-select:none;}
+  .verchip input{margin:0;cursor:pointer;}
+  .verchip.on{background:var(--orange-soft);border-color:var(--orange);color:var(--ink);font-weight:bold;}
+  .review li.rv-adv{color:#8a5a00;}
   .builder-wrap{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;}
   .palette{flex:0 0 200px;background:#f6f3ea;border:2px solid var(--line);border-radius:8px;padding:12px;}
   .palette h4{margin:4px 0 10px;font-family:Arial,sans-serif;font-size:14px;}
@@ -79,8 +86,8 @@
 <div class="sect">
   <div class="row"><label>Scenario name</label><input class="namef" id="scenName" placeholder="e.g. Child crosses with the maid"></div>
   <div class="row"><label>Situation</label><textarea id="scenSit" rows="2" placeholder="Describe the situation"></textarea></div>
-  <div class="row"><label>Assign to version</label>
-    <select id="scenVer"><option value="v1">V1 — Child Safety</option><option value="v2">V2 — Talking SENA</option><option value="v3">V3 — Supervision</option><option value="v4">V4 — Identity</option></select></div>
+  <div class="row"><label>Applies to version(s)</label>
+    <span id="scenVers" class="verchips"></span></div>
   <div class="row"><label>Status</label>
     <select id="scenPrio"><option value="undecided">Not decided</option><option value="delayed">Delayed</option><option value="deferred">Deferred</option><option value="confirmed">Confirmed (admin only)</option><option value="removed">Removed (hidden)</option></select></div>
   <div class="row"><label>Outcome</label><input id="scenOut" placeholder="e.g. CONFIRMED ALERT"></div>
@@ -103,6 +110,7 @@
 <div class="sect">
   <button class="btn primary" onclick="saveScenario()">Save scenario to its version page</button>
   <button class="btn orange" onclick="exportJson()">Export diagram → JSON</button>
+  <button class="btn" onclick="exportPdf()">Export PDF (diagram + metadata)</button>
   <button class="btn" onclick="clearAll()">Clear</button>
   <textarea class="jsonarea" id="exportArea" style="display:none;margin-top:10px;" readonly></textarea>
 </div>
@@ -128,6 +136,22 @@ const SUPABASE_URL="https://bzwdvdbmpurqqpntrcio.supabase.co";
 const SUPABASE_KEY="sb_publishable_6YrFzgL6-Whlft8lofg5Nw_jxIsPz_t";
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 let isAdmin=false,currentUserId=null;
+// ===== multi-version tagging (versions[]) — organic overlap, never compound IDs =====
+const VERSION_DEFS=[['v1','V1 — Child Safety'],['v2','V2 — Talking SENA'],['v3','V3 — Supervision'],['v4','V4 — Identity']]; // easy to extend: add ['v5','V5 — …']
+function renderVersionChips(selected){
+  selected=(selected&&selected.length)?selected:['v1'];
+  const wrap=document.getElementById('scenVers'); if(!wrap) return; wrap.innerHTML='';
+  VERSION_DEFS.forEach(function(d){
+    const val=d[0],label=d[1],on=selected.indexOf(val)>=0;
+    const chip=document.createElement('label'); chip.className='verchip'+(on?' on':'');
+    const cb=document.createElement('input'); cb.type='checkbox'; cb.value=val; cb.checked=on;
+    cb.addEventListener('change',function(){ chip.classList.toggle('on',cb.checked); });
+    const sp=document.createElement('span'); sp.textContent=label;
+    chip.appendChild(cb); chip.appendChild(sp); wrap.appendChild(chip);
+  });
+}
+function getSelectedVersions(){ return Array.prototype.slice.call(document.querySelectorAll('#scenVers input:checked')).map(function(c){return c.value;}); }
+function setSelectedVersions(arr){ renderVersionChips(arr); }
 // ===== Path 1 branching tree renderer v2 (auto-height + layer legend) =====
 const NW=200, VGAP=54, LH=17, NPAD=20;
 const LAYER_COLORS={conversation:'#2d4a6b',safety:'#b03a2e',fallback:'#e07b1a',system:'#9aa0a6'};
@@ -269,7 +293,9 @@ function applyJson(text){
   document.getElementById('scenSit').value=S(sc.situation);
   document.getElementById('scenOut').value=S(sc.outcome);
   document.getElementById('scenWhy').value=S(sc.why);
-  document.getElementById('scenVer').value=allowedVer.includes(sc.version)?sc.version:'v1';
+  let _vers=Array.isArray(sc.versions)&&sc.versions.length?sc.versions:(sc.version?[sc.version]:['v1']);
+  _vers=_vers.filter(function(v){return allowedVer.includes(v);}); if(!_vers.length)_vers=['v1'];
+  setSelectedVersions(_vers);
   document.getElementById('scenPrio').value=allowedPrio.includes(sc.priority)?sc.priority:'undecided';
   __tree=null;
   if(sc.root){
@@ -333,6 +359,54 @@ function coverage(root){
     else walk(n.next); })(root);
   return {decisions:d,terminals:t,alerts:a,noalerts:na,layers:[...layers]};
 }
+// ===== House-style + SENA-invariant advisories (warn, never block) =====
+function _short(t){ t=(t||'').replace(/\s+/g,' ').trim(); return t.length>60?t.slice(0,60)+'…':t; }
+function advisories(root){
+  if(!root) return [];
+  const out=[];
+  const TECH=/\b(deterministic|geometry|classifier|proximity proxy|npu|hailo|schema|payload|emit|event_created|boundary-cross|inference|tensor|bbox|bounding box|far\/frr|int4|sealed|primitive facts|per-track)\b/i;
+  const SENSORDEP=/\bsensor\b|\bpir\b|proximity sensor|perimeter sensor|magnetic sensor|contact sensor/i;
+  const SENSOROK=/only corroborat|never required|never gate|enhanc|accelerat|corroborat|not required|vision-first|vision detect/i;
+  const IDWORD=/\b(unknown|unrecognized|recognis|recognized|identity|known person|face[- ]?match|whose child)\b/i;
+  const IDOK=/not used to gate|grade only|grades only|escalate only|never gate|after the alarm|scope/i;
+  const INTEL=/\b(identity|recognis|recognized|classifier|assault|aggression|understanding|nlu|intent|whose child|face)\b/i;
+  let abiFlagged=false;
+  function isSafetyCreate(n){ return n.type==='io' && n.layer==='safety' && /create|alarm|fire|event/i.test(n.t||''); }
+  function isIntelNode(n){ return (n.layer==='conversation'||n.layer==='fallback') && INTEL.test(n.t||''); }
+  (function walk(n,seenCreate,intelBefore){
+    if(!n) return;
+    const t=n.t||'';
+    // (4a) dual-language: technical text with no plain-English / bracketed part
+    if(t && TECH.test(t) && !/\([^)]+\)/.test(t)){
+      out.push('House-style: node “'+_short(t)+'” reads purely technical. SENA uses dual-language node text — a plain-English sentence for a board member, with the technical detail in brackets.');
+    }
+    // (4b) vision-first (D-22): a trigger framed as depending on a physical sensor
+    if((n.layer==='safety'||n.type==='start'||n.type==='decision') && SENSORDEP.test(t) && !SENSOROK.test(t)){
+      out.push('Vision-first (D-22): node “'+_short(t)+'” frames a physical sensor as part of the trigger. Vision is the detector; sensors/WiFi only corroborate, never gate. Reword to “cameras detect …; sensors only corroborate/accelerate, never required”.');
+    }
+    // (5) identity must not GATE a safety trigger
+    if(n.type==='decision' && n.layer==='safety' && !seenCreate && IDWORD.test(t) && !IDOK.test(t)){
+      out.push('Safety invariant: trigger “'+_short(t)+'” appears to GATE on identity. Identity may only GRADE after the alarm — never decide whether a safety event exists (VULN-1 / D-19).');
+    }
+    // (5) alarm-before-intelligence
+    if(!seenCreate && isIntelNode(n)) intelBefore=true;
+    const nowCreate=seenCreate||isSafetyCreate(n);
+    if(intelBefore && !abiFlagged && (isSafetyCreate(n) || (n.type==='terminal'&&n.layer==='safety'&&n.alert))){
+      abiFlagged=true;
+      out.push('Safety invariant: an intelligence/identity node sits on a path BEFORE the safety event is created/alarmed. The deterministic trigger + alarm must come first; intelligence only escalates afterward (alarm-before-intelligence, §5).');
+    }
+    if(n.type==='decision'){ walk(n.yes,nowCreate,intelBefore); walk(n.no,nowCreate,intelBefore); }
+    else if(n.next) walk(n.next,nowCreate,intelBefore);
+  })(root,false,false);
+  // (5) no silent safety terminal
+  (function w(n){ if(!n) return;
+    if(n.type==='terminal' && n.layer==='safety' && !n.alert && !/notify|info|log|ambient|monitor|perceiv|awareness|alert|escalat|suspend|track|warn|declared|non-event/i.test(n.t||'')){
+      out.push('Safety invariant: terminal “'+_short(n.t||'')+'” is a safety outcome with no alert and no sign of notifying. A safety terminal must at least notify or be ambient Info — never silent.');
+    }
+    if(n.type==='decision'){ w(n.yes); w(n.no); } else if(n.next) w(n.next);
+  })(root);
+  return Array.from(new Set(out));
+}
 function buildReview(){
   const root=__tree; const rv=document.getElementById('review'); if(!root){ rv.style.display='none'; return; }
   const issues=reviewIssues(root); const cov=coverage(root);
@@ -341,6 +415,9 @@ function buildReview(){
   else { h+='<p class="rv-warn">⚠ '+issues.length+' structural issue(s) — review before saving:</p><ul>'+issues.map(i=>'<li>'+i.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))+'</li>').join('')+'</ul>'; }
   h+='<h4>Plain-English walkthrough</h4><div class="walk">'+walkthrough(root).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))+'</div>';
   h+='<h4>Coverage</h4><p class="cov"><b>'+cov.decisions+'</b> decisions · <b>'+cov.terminals+'</b> outcomes ('+cov.alerts+' alert, '+cov.noalerts+' no-alert) · layers: '+(cov.layers.join(', ')||'none')+'</p>';
+  const adv=advisories(root);
+  if(adv.length){ h+='<h4>House-style &amp; safety advisories <span style="font-weight:normal;font-size:12px;color:#888">(warnings — never block saving)</span></h4><ul>'+adv.map(a=>'<li class="rv-adv">'+a.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))+'</li>').join('')+'</ul>'; }
+  else { h+='<p class="rv-ok" style="font-size:13px;">✓ No house-style or safety advisories.</p>'; }
   rv.innerHTML=h; rv.style.display='block';
   return issues;
 }
@@ -352,9 +429,12 @@ function renderPreview(nodes){
 
 // ---- diagram → JSON export ----
 function buildObj(){
+  let versions=getSelectedVersions().filter(function(v){return ['v1','v2','v3','v4'].includes(v);});
+  if(!versions.length) versions=['v1'];
   const o={ name:document.getElementById('scenName').value||'Untitled',
     situation:document.getElementById('scenSit').value||'',
-    version:document.getElementById('scenVer').value,
+    versions:versions,                       // multi-version membership (organic overlap; never a compound tag)
+    version:versions[0],                     // legacy primary (back-compat with the version column)
     priority:document.getElementById('scenPrio').value,
     outcome:document.getElementById('scenOut').value||'',
     outcomeClass:'oc-alert', why:document.getElementById('scenWhy').value||'',
@@ -363,7 +443,63 @@ function buildObj(){
   return o;
 }
 function exportJson(){ const a=document.getElementById('exportArea'); a.style.display='block'; a.value=JSON.stringify({type:__tree?'sena_scenario_tree':'sena_scenario_v1',schemaVersion:__tree?2:1,scenario:buildObj()},null,2); a.select(); }
-function clearAll(){ ['scenName','scenSit','scenOut','scenWhy'].forEach(id=>document.getElementById(id).value=''); __tree=null; document.getElementById('preview').innerHTML=''; }
+function clearAll(){ ['scenName','scenSit','scenOut','scenWhy'].forEach(id=>document.getElementById(id).value=''); __tree=null; document.getElementById('preview').innerHTML=''; renderVersionChips(['v1']); const rv=document.getElementById('review'); if(rv){rv.style.display='none';rv.innerHTML='';} }
+
+// ---- Export PDF: metadata header + diagram (SVG rendered fresh from JSON, never stored) ----
+function scenarioId(name){
+  const tok=(name||'').trim().split(/\s+/)[0]||'';
+  if(/[-\d]/.test(tok)) return tok.replace(/[^A-Za-z0-9_\-]/g,'')||'scenario';
+  return ((name||'scenario').trim().replace(/[^A-Za-z0-9_\-]+/g,'_').slice(0,40))||'scenario';
+}
+function _svgForPdf(){
+  let svg=treeSVG(__tree);                       // always rendered fresh from the scenario JSON
+  const m=svg.match(/viewBox="([^"]+)"/);
+  let vbW=900,vbH=600;
+  if(m){ const p=m[1].trim().split(/\s+/).map(Number); if(p.length===4){ vbW=p[2]; vbH=p[3]; } }
+  svg=svg.replace('width="100%"','width="'+vbW+'" height="'+vbH+'"');   // give the raster an intrinsic size
+  return {svg:svg,vbW:vbW,vbH:vbH};
+}
+function exportPdf(){
+  if(!__tree){ toast('Upload or paste scenario JSON first.','warn'); return; }
+  if(!(window.jspdf&&window.jspdf.jsPDF)){ toast('PDF library is still loading — try again in a moment.','warn'); return; }
+  const sc=buildObj(), id=scenarioId(sc.name);
+  const f=_svgForPdf(), scale=2.5, img=new Image();
+  img.onload=function(){
+    try{
+      const cv=document.createElement('canvas'); cv.width=Math.max(1,Math.round(f.vbW*scale)); cv.height=Math.max(1,Math.round(f.vbH*scale));
+      const ctx=cv.getContext('2d'); ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,cv.width,cv.height); ctx.drawImage(img,0,0,cv.width,cv.height);
+      _renderPdf(sc,id,cv.toDataURL('image/png'),f.vbW,f.vbH);
+    }catch(err){ toast('PDF render failed: '+err.message,'err'); }
+  };
+  img.onerror=function(){ toast('Could not rasterize the diagram for the PDF.','err'); };
+  img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(f.svg);
+}
+function _renderPdf(sc,id,png,vbW,vbH){
+  const JS=window.jspdf.jsPDF, landscape=vbW>=vbH;
+  const doc=new JS({orientation:landscape?'landscape':'portrait',unit:'pt',format:'a4'});
+  const pageW=doc.internal.pageSize.getWidth(), pageH=doc.internal.pageSize.getHeight(), margin=36;
+  let y=margin+6;
+  doc.setFont('times','bold'); doc.setFontSize(16); doc.setTextColor(224,123,26);     // --orange
+  const titleLines=doc.splitTextToSize(sc.name||'Untitled', pageW-2*margin);
+  doc.text(titleLines, margin, y); y+=titleLines.length*18+2;
+  doc.setFont('times','normal'); doc.setFontSize(10); doc.setTextColor(45,74,107);      // --ink-soft
+  const meta=[
+    ['ID', id],
+    ['Versions', (sc.versions||[]).map(function(v){return (v||'').toUpperCase();}).join(', ')||'—'],
+    ['Priority', sc.priority||'—'],
+    ['Outcome', sc.outcome||'—'],
+    ['Situation', sc.situation||'—'],
+    ['Why', sc.why||'—'],
+    ['Generated', new Date().toLocaleString()]
+  ];
+  meta.forEach(function(kv){ const lines=doc.splitTextToSize(kv[0]+':  '+(kv[1]||'—'), pageW-2*margin); doc.text(lines, margin, y); y+=lines.length*13+1; });
+  y+=6; doc.setDrawColor(217,214,204); doc.setLineWidth(1); doc.line(margin,y,pageW-margin,y); y+=12;
+  // diagram scaled to fit the remaining area — landscape allowed, never cropped
+  const availW=pageW-2*margin, availH=pageH-margin-y, ratio=Math.min(availW/vbW, availH/vbH), w=vbW*ratio, h=vbH*ratio;
+  doc.addImage(png,'PNG', margin+(availW-w)/2, y, w, h);
+  doc.save(id+'.pdf');
+  toast('PDF exported: '+id+'.pdf','ok');
+}
 
 // ---- BRANCHING TREE BUILDER (option C) ----
 function tbInit(){
@@ -431,25 +567,28 @@ function tbToPreview(){ if(__tree) document.getElementById('preview').innerHTML=
 
 
 async function saveScenario(){
+  if(getSelectedVersions().length===0){ toast('Select at least one version (V1–V4).','warn'); return; }
   const sc=buildObj();
   if(!sc.name||sc.name==='Untitled'){ toast('Give the scenario a name.','warn'); return; }
   if(!__tree){ toast('Upload or paste scenario JSON first.','warn'); return; }
   if(sc.priority==='confirmed' && !isAdmin){ toast('Only the admin can set Confirmed.','warn'); return; }
-  const issues=reviewIssues(__tree);
-  if(issues.length>0){
-    confirmModal('Save with '+issues.length+' issue(s)?',
-      'The review found '+issues.length+' structural issue(s). You can still save (warn-and-allow), but consider fixing them first. Save anyway?',
+  const issues=reviewIssues(__tree), adv=advisories(__tree);
+  if(issues.length+adv.length>0){
+    confirmModal('Save with '+issues.length+' issue(s) + '+adv.length+' advisory(ies)?',
+      'The review found '+issues.length+' structural issue(s) and '+adv.length+' house-style/safety advisory(ies). These never block saving (warn-and-allow), but consider fixing them first. Save anyway?',
       ()=>doSave(sc));
   } else { doSave(sc); }
 }
 async function doSave(sc){
+  const verLabel=(sc.versions||[sc.version]).map(function(v){return (v||'').toUpperCase();}).join(', ');
   const { error } = await sb.from('scenarios').insert({ data:sc, version:sc.version, priority:sc.priority, created_by:currentUserId, last_edited_by:currentUserId });
   if(error){ toast('Save failed: '+error.message,'err'); return; }
-  await sb.rpc('log_audit',{p_action:'created scenario',p_detail:sc.name+' ('+sc.version+')' });
-  toast('Saved to '+sc.version.toUpperCase()+'. Opening…','ok');
+  await sb.rpc('log_audit',{p_action:'created scenario',p_detail:sc.name+' ('+verLabel+')' });
+  toast('Saved to '+verLabel+'. Opening '+sc.version.toUpperCase()+'…','ok');
   setTimeout(()=>{ location.href = sc.version+'.html'; }, 900);
 }
 
+renderVersionChips(['v1']);
 (async()=>{ await guard(); })();
 </script>
 </body>
