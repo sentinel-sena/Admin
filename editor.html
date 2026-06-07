@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SENA — Scenario Editor</title>
+<style>
+  :root{
+    --ink:#16243a; --ink-soft:#2d4a6b; --orange:#e07b1a; --orange-line:#e8943f;
+    --green:#2a7a2a; --green-dark:#1e5a1e; --red:#b03a2e; --paper:#fbfaf7; --line:#d9d6cc;
+    --step:#fdf0e0; --dec:#fff6e9; --noalert:#eef0e8; --noalertb:#c4c8bc; --lbl:#F3EAA0; --lblt:#7a6a1a; --txt:#2b3a3a;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:Georgia,'Times New Roman',serif;line-height:1.45}
+  .menu{background:var(--green);color:#fff;padding:12px 20px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .menu h1{font-size:18px;margin:0 16px 0 0}
+  .menu button,.menu label.btn{background:#fff;color:var(--green-dark);border:none;border-radius:18px;padding:6px 14px;font-family:inherit;font-size:13px;font-weight:bold;cursor:pointer}
+  .menu button:hover,.menu label.btn:hover{background:#eef7ee}
+  .menu .spacer{flex:1}
+  .mtabs{display:flex;flex-wrap:wrap;gap:6px;padding:10px 20px;background:#fff;border-bottom:1px solid var(--line)}
+  .mtab{padding:6px 16px;border:1px solid var(--line);border-radius:8px 8px 0 0;background:#f0ece2;cursor:pointer;font-size:14px}
+  .mtab.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .stabs{display:flex;flex-wrap:wrap;gap:5px;padding:8px 20px;background:#f7f5ef;border-bottom:1px solid var(--line);max-height:120px;overflow:auto}
+  .stab{padding:4px 12px;border:1px solid var(--line);border-radius:16px;background:#fff;cursor:pointer;font-size:12px}
+  .stab.active{background:var(--orange);color:#fff;border-color:var(--orange)}
+  .wrap{padding:18px 22px 60px}
+  .meta-card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin-bottom:14px}
+  .meta-card .row{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:8px}
+  .meta-card label{font-size:12px;color:var(--ink-soft);display:block;margin-bottom:2px;font-weight:bold}
+  .meta-card input[type=text],.meta-card textarea,.meta-card select{width:100%;font-family:inherit;font-size:13px;border:1px solid var(--line);border-radius:6px;padding:6px 8px;background:#fffdf9}
+  .meta-card .f{flex:1;min-width:200px}
+  .vers{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .vers label{font-weight:normal;color:var(--txt);display:inline-flex;gap:4px;align-items:center;font-size:13px}
+  .toolbar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+  .toolbar button{background:var(--ink);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-family:inherit;font-size:13px;cursor:pointer}
+  .toolbar button.alt{background:var(--orange)}
+  .toolbar button.danger{background:var(--red)}
+  .toolbar button:hover{opacity:.92}
+  .cols{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+  .diagram{flex:2;min-width:380px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px;overflow:auto;max-height:74vh}
+  .panel{flex:1;min-width:300px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px;max-height:74vh;overflow:auto}
+  .panel h3{margin:0 0 8px;font-size:15px;color:var(--ink)}
+  .panel .hint{font-size:12px;color:#777;margin:0 0 10px}
+  .panel label{font-size:12px;color:var(--ink-soft);display:block;margin:8px 0 2px;font-weight:bold}
+  .panel textarea,.panel select,.panel input[type=text]{width:100%;font-family:inherit;font-size:13px;border:1px solid var(--line);border-radius:6px;padding:6px 8px;background:#fffdf9}
+  .panel .addrow{display:flex;gap:6px;margin-top:6px;align-items:center}
+  .panel .addrow select{flex:1}
+  .panel button{margin-top:8px;background:var(--ink);color:#fff;border:none;border-radius:7px;padding:6px 12px;font-family:inherit;font-size:12px;cursor:pointer}
+  .panel button.add{background:var(--green)}
+  .panel button.del{background:var(--red)}
+  .panel button.full{width:100%}
+  .val{margin-top:12px;border-top:1px dashed var(--line);padding-top:10px}
+  .val .issue{font-size:12px;color:var(--red);margin:3px 0}
+  .val .ok{font-size:12px;color:var(--green);margin:3px 0}
+  .jsonbox{margin-top:14px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px}
+  .jsonbox h3{margin:0 0 6px;font-size:14px;cursor:pointer}
+  .jsonbox textarea{width:100%;height:220px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;border:1px solid var(--line);border-radius:6px;padding:8px}
+  .empty{color:#888;padding:40px;text-align:center}
+  /* node selection highlight */
+  .node-sel{outline:3px solid #2563eb;outline-offset:2px}
+  /* toast + modal */
+  #toasts{position:fixed;top:14px;right:14px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+  .toast{padding:10px 16px;border-radius:8px;color:#fff;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,.2);max-width:320px}
+  .toast.ok{background:var(--green)} .toast.warn{background:var(--orange)} .toast.err{background:var(--red)} .toast.info{background:var(--ink-soft)}
+  #modalbg{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;z-index:9998}
+  #modal{background:#fff;border-radius:10px;padding:22px;max-width:420px;font-size:14px}
+  #modal .mbtns{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}
+  #modal button{border:none;border-radius:7px;padding:8px 16px;font-family:inherit;font-size:13px;cursor:pointer}
+  #modal .yes{background:var(--red);color:#fff} #modal .no{background:#e7e3d8;color:var(--ink)}
+  svg text{user-select:none}
+  svg .nodehit{cursor:pointer}
+</style>
+</head>
+<body>
+<div class="menu">
+  <h1>SENA — Scenario Editor</h1>
+  <label class="btn">Upload JSON<input type="file" id="file" accept=".json" hidden></label>
+  <button onclick="pasteJSON()">Paste JSON</button>
+  <button onclick="exportAll()">Export all JSON</button>
+  <span class="spacer"></span>
+  <button onclick="printCategory()">Print category PDF</button>
+</div>
+<div class="mtabs" id="mtabs"></div>
+<div class="stabs" id="stabs"></div>
+<div class="wrap" id="wrap">
+  <div class="empty" id="empty">Upload or paste a scenarios JSON (a single scenario, or <code>{"scenarios":[...]}</code>) to begin.</div>
+  <div id="scenarioPage" style="display:none">
+    <div class="meta-card">
+      <div class="row">
+        <div class="f"><label>Name</label><input type="text" id="m_name"></div>
+        <div class="f" style="max-width:180px"><label>Priority</label>
+          <select id="m_priority"><option>undecided</option><option>deferred</option><option>confirmed</option></select>
+        </div>
+      </div>
+      <div class="row"><div class="f"><label>Situation</label><textarea id="m_situation" rows="2"></textarea></div></div>
+      <div class="row">
+        <div class="f"><label>Outcome</label><input type="text" id="m_outcome"></div>
+      </div>
+      <div class="row"><div class="f"><label>Why / rationale</label><textarea id="m_why" rows="2"></textarea></div></div>
+      <div class="row"><div class="f"><label>Versions (a scenario may belong to several — organic overlap)</label>
+        <div class="vers" id="m_versions"></div></div></div>
+    </div>
+    <div class="toolbar">
+      <button class="alt" onclick="printScenario()">Print this scenario PDF</button>
+      <button onclick="saveLocal()">Export this scenario JSON</button>
+      <button onclick="applyMeta()">Apply metadata</button>
+    </div>
+    <div class="cols">
+      <div class="diagram" id="diagram"></div>
+      <div class="panel" id="panel">
+        <h3>Edit</h3>
+        <p class="hint">Click any box in the diagram to edit it. Structured editing keeps the JSON always valid. Editing the JSON below and clicking <b>Apply JSON</b> updates the diagram.</p>
+        <div id="nodeEditor"><p class="hint">No box selected.</p></div>
+        <div class="val" id="validation"></div>
+      </div>
+    </div>
+    <div class="jsonbox">
+      <h3 onclick="toggleJSON()">▸ Raw JSON (click to expand) — edit and Apply</h3>
+      <div id="jsonWrap" style="display:none">
+        <textarea id="jsonArea"></textarea>
+        <button class="alt" style="margin-top:8px;background:var(--orange);color:#fff;border:none;border-radius:7px;padding:7px 14px;cursor:pointer;font-family:inherit" onclick="applyJSON()">Apply JSON → diagram</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toasts"></div>
+<div id="modalbg"><div id="modal"><div id="modalmsg"></div><div class="mbtns"><button class="no" onclick="closeModal(false)">Cancel</button><button class="yes" id="modalyes" onclick="closeModal(true)">Delete</button></div></div></div>
+
+<script>
+// ---------- theme constants for SVG ----------
+const C={ink:'#16243a',inksoft:'#2d4a6b',orange:'#e07b1a',oline:'#e8943f',red:'#b03a2e',
+  step:'#fdf0e0',dec:'#fff6e9',noalert:'#eef0e8',noalertb:'#c4c8bc',lbl:'#F3EAA0',lblt:'#7a6a1a',txt:'#2b3a3a'};
+const LAYER={conversation:'#2d4a6b',safety:'#b03a2e',fallback:'#e07b1a',system:'#9aa0a6'};
+const LAYERN={conversation:'Conversation',safety:'Safety',fallback:'Fallback',system:'System'};
+const CATS=[['S-','Security'],['C-','Child'],['V-','Visitor'],['X-','Concurrency'],['Y-','Degraded-Mode'],['COV-','Coverage'],['DEL-','Delivery']];
+const VERSIONS=['v1','v2','v3','v4'];
+
+let scenarios=[];      // [{scenario object, _cat}]
+let activeCat=null, activeIdx=-1, selUid=null;
+
+// ---------- toast / modal ----------
+function toast(msg,type='info'){const t=document.createElement('div');t.className='toast '+type;t.textContent=msg;document.getElementById('toasts').appendChild(t);setTimeout(()=>t.remove(),3200);}
+let modalCb=null;
+function confirmModal(msg,cb,yesLabel='Delete'){document.getElementById('modalmsg').textContent=msg;document.getElementById('modalyes').textContent=yesLabel;document.getElementById('modalbg').style.display='flex';modalCb=cb;}
+function closeModal(ok){document.getElementById('modalbg').style.display='none';if(modalCb){const cb=modalCb;modalCb=null;cb(ok);}}
+
+// ---------- load ----------
+document.getElementById('file').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{loadText(r.result);};r.readAsText(f);});
+function pasteJSON(){const t=prompt('Paste scenario JSON:');if(t)loadText(t);}
+function loadText(txt){
+  let data;try{data=JSON.parse(txt);}catch(e){toast('Invalid JSON: '+e.message,'err');return;}
+  let list=[];
+  if(Array.isArray(data)) list=data;
+  else if(data.scenarios) list=data.scenarios;
+  else if(data.scenario) list=[data.scenario];
+  else if(data.root) list=[data];
+  else {toast('No scenarios found in JSON','err');return;}
+  // merge by id (replace if same id)
+  list.forEach(sc=>{
+    if(!sc.versions) sc.versions = sc.version? [sc.version] : ['v2'];
+    const id=idOf(sc); const cat=catOf(id);
+    const exist=scenarios.findIndex(s=>idOf(s)===id);
+    sc._cat=cat;
+    if(exist>=0) scenarios[exist]=sc; else scenarios.push(sc);
+  });
+  toast(list.length+' scenario(s) loaded','ok');
+  if(!activeCat) activeCat=scenarios[0]._cat;
+  activeIdx = scenarios.findIndex(s=>s._cat===activeCat);
+  renderTabs(); renderScenario();
+}
+function idOf(sc){return (sc.name||'').split(/\s+/)[0]||'?';}
+function catOf(id){for(const[p,n]of CATS){if(id.toUpperCase().startsWith(p))return n;}return 'Other';}
+
+// ---------- tabs ----------
+function renderTabs(){
+  const cats=[...new Set(scenarios.map(s=>s._cat))];
+  const mt=document.getElementById('mtabs');mt.innerHTML='';
+  cats.forEach(c=>{const d=document.createElement('div');d.className='mtab'+(c===activeCat?' active':'');d.textContent=c+' ('+scenarios.filter(s=>s._cat===c).length+')';d.onclick=()=>{activeCat=c;activeIdx=scenarios.findIndex(s=>s._cat===c);selUid=null;renderTabs();renderScenario();};mt.appendChild(d);});
+  const st=document.getElementById('stabs');st.innerHTML='';
+  scenarios.forEach((s,i)=>{if(s._cat!==activeCat)return;const d=document.createElement('div');d.className='stab'+(i===activeIdx?' active':'');d.textContent=idOf(s);d.onclick=()=>{activeIdx=i;selUid=null;renderTabs();renderScenario();};st.appendChild(d);});
+}
+
+// ---------- uid assignment + tree walk ----------
+let _uidc=0;
+function assignUids(n){if(!n||typeof n!=='object')return;n._uid=++_uidc;['yes','no','next'].forEach(k=>{if(n[k])assignUids(n[k]);});}
+function findWithParent(root,uid,parent=null,slot=null){
+  if(!root||typeof root!=='object')return null;
+  if(root._uid===uid)return{node:root,parent,slot};
+  for(const k of ['yes','no','next']){if(root[k]){const r=findWithParent(root[k],uid,root,k);if(r)return r;}}
+  return null;
+}
+
+// ---------- current scenario ----------
+function cur(){return scenarios[activeIdx];}
+
+// ---------- render scenario page ----------
+function renderScenario(){
+  document.getElementById('empty').style.display = scenarios.length?'none':'block';
+  document.getElementById('scenarioPage').style.display = scenarios.length?'block':'none';
+  if(!scenarios.length)return;
+  const sc=cur(); if(!sc)return;
+  assignUids(sc.root);
+  document.getElementById('m_name').value=sc.name||'';
+  document.getElementById('m_priority').value=sc.priority||'undecided';
+  document.getElementById('m_situation').value=sc.situation||'';
+  document.getElementById('m_outcome').value=sc.outcome||'';
+  document.getElementById('m_why').value=sc.why||'';
+  const vbox=document.getElementById('m_versions');vbox.innerHTML='';
+  VERSIONS.forEach(v=>{const id='v_'+v;const checked=(sc.versions||[]).includes(v)?'checked':'';vbox.innerHTML+=`<label><input type="checkbox" id="${id}" ${checked} onchange="setVersions()"> ${v.toUpperCase()}</label>`;});
+  drawDiagram(); renderNodeEditor(); renderValidation(); refreshJSON();
+}
+function setVersions(){const sc=cur();sc.versions=VERSIONS.filter(v=>document.getElementById('v_'+v).checked);if(!sc.versions.length){sc.versions=['v2'];document.getElementById('v_v2').checked=true;toast('At least one version required','warn');}sc.version=sc.versions[0];refreshJSON();}
+function applyMeta(){const sc=cur();sc.name=document.getElementById('m_name').value;sc.priority=document.getElementById('m_priority').value;sc.situation=document.getElementById('m_situation').value;sc.outcome=document.getElementById('m_outcome').value;sc.why=document.getElementById('m_why').value;sc._cat=catOf(idOf(sc));renderTabs();refreshJSON();toast('Metadata applied','ok');}
+
+// ---------- SVG diagram ----------
+const NW=210,NH=64,VGAP=58,HPAD=30,LINEH=15,FS=13;
+function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function wrapText(t,mx){const w=(t||'').split(/\s+/);let out=[],cur='';w.forEach(x=>{if((cur+' '+x).trim().length<=mx)cur=(cur+' '+x).trim();else{if(cur)out.push(cur);cur=x;}});if(cur)out.push(cur);return out.slice(0,6).length?out.slice(0,6):[''];}
+function nodeH(n){const l=wrapText(n.t,(n.type==='start'||n.type==='terminal')?26:28);return Math.max(NH,20+l.length*LINEH);}
+function measure(n){n._h=nodeH(n);n._kids=[];if(n.type==='decision'){if(n.yes)n._kids.push(['yes',n.yes]);if(n.no)n._kids.push(['no',n.no]);}else if(n.next)n._kids.push([null,n.next]);if(!n._kids.length){n._w=NW+HPAD;return n._w;}n._w=Math.max(NW+HPAD,n._kids.reduce((a,[,k])=>a+measure(k),0));return n._w;}
+function place(n,xl,yt,acc){n._cx=xl+n._w/2;n._cy=yt+n._h/2;acc.push(n);let cx=xl;n._kids.forEach(([b,k])=>{k._b=b;place(k,cx,yt+n._h+VGAP,acc);cx+=k._w;});}
+function nodeSVG(n){const h=n._h,x=n._cx-NW/2,y=n._cy-h/2,t=n.type,al=n.alert;let s='',tc=C.txt;
+  if(t==='start'||t==='terminal'){let f,st;if(t==='terminal'&&al){f=C.red;st=C.red;tc='#fff';}else if(t==='terminal'){f=C.noalert;st=C.noalertb;tc=C.txt;}else{f=C.ink;st=C.ink;tc='#fff';}s+=`<rect x="${x}" y="${y}" width="${NW}" height="${h}" rx="${h/2}" fill="${f}" stroke="${st}" stroke-width="2.5"/>`;}
+  else if(t==='decision'){s+=`<rect x="${x}" y="${y}" width="${NW}" height="${h}" rx="8" fill="${C.dec}" stroke="${C.orange}" stroke-width="2.5"/>`;s+=`<polygon points="${x+13},${y+6} ${x+21},${y+14} ${x+13},${y+22} ${x+5},${y+14}" fill="${C.orange}"/>`;}
+  else if(t==='io'){const sk=18;s+=`<polygon points="${x+sk},${y} ${x+NW},${y} ${x+NW-sk},${y+h} ${x},${y+h}" fill="${C.step}" stroke="${C.orange}" stroke-width="2.5"/>`;}
+  else{s+=`<rect x="${x}" y="${y}" width="${NW}" height="${h}" rx="8" fill="${C.step}" stroke="${C.orange}" stroke-width="2.5"/>`;}
+  if(LAYER[n.layer])s+=`<rect x="${x}" y="${y+8}" width="5" height="${h-16}" rx="2.5" fill="${LAYER[n.layer]}"/>`;
+  const lines=wrapText(n.t,(t==='start'||t==='terminal')?26:28);let ly=n._cy-(lines.length-1)*7.5;
+  lines.forEach(ln=>{s+=`<text x="${n._cx}" y="${ly+4}" text-anchor="middle" font-size="${FS}" font-weight="bold" fill="${tc}" font-family="Georgia,serif">${esc(ln)}</text>`;ly+=LINEH;});
+  // transparent hit rect on top for clicking
+  s+=`<rect class="nodehit" data-uid="${n._uid}" x="${x}" y="${y}" width="${NW}" height="${h}" fill="transparent"/>`;
+  if(n._uid===selUid)s+=`<rect x="${x-3}" y="${y-3}" width="${NW+6}" height="${h+6}" rx="10" fill="none" stroke="#2563eb" stroke-width="3"/>`;
+  return s;}
+function edgesSVG(nodes){let s='';nodes.forEach(n=>{(n._kids||[]).forEach(([b,k])=>{const x1=n._cx,y1=n._cy+n._h/2,x2=k._cx,y2=k._cy-k._h/2,my=(y1+y2)/2;s+=`<path d="M${x1} ${y1} L${x1} ${my} L${x2} ${my} L${x2} ${y2}" fill="none" stroke="${C.oline}" stroke-width="1.8" marker-end="url(#ah)"/>`;if(b){const tx=b==='yes'?(n.yesLabel||'YES'):(n.noLabel||'NO');const lw=Math.max(34,tx.length*7+10);let lx=x1+(x2>=x1?8:-8-lw);if(Math.abs(x2-x1)<3)lx=x1+8;s+=`<rect x="${lx}" y="${my-9}" width="${lw}" height="17" rx="3" fill="${C.lbl}"/><text x="${lx+lw/2}" y="${my+3}" text-anchor="middle" font-size="10.5" font-weight="bold" fill="${C.lblt}" font-family="Georgia,serif">${esc(tx)}</text>`;}});});return s;}
+function buildSVG(root,big){
+  const clone=JSON.parse(JSON.stringify(root));
+  // keep uids
+  (function copyUid(a,b){if(!a||!b)return;b._uid=a._uid;['yes','no','next'].forEach(k=>{if(a[k]&&b[k])copyUid(a[k],b[k]);});})(root,clone);
+  measure(clone);const nodes=[];place(clone,0,20,nodes);
+  const W=clone._w+40,H=Math.max(...nodes.map(n=>n._cy+n._h/2))+30;
+  const used=['conversation','safety','fallback','system'].filter(l=>nodes.some(n=>n.layer===l));
+  let s=`<svg viewBox="0 0 ${W} ${H}" ${big?'style="width:100%;height:auto"':'width="'+W+'"'} xmlns="http://www.w3.org/2000/svg" font-family="Georgia,serif">`;
+  s+=`<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1 L9 5 L1 9" fill="none" stroke="${C.oline}" stroke-width="1.8"/></marker></defs>`;
+  s+=`<rect x="0" y="0" width="${W}" height="${H}" fill="#fff"/>`;
+  s+=edgesSVG(nodes);nodes.forEach(n=>s+=nodeSVG(n));s+='</svg>';
+  return {svg:s,legend:used};
+}
+function drawDiagram(){
+  const sc=cur();const d=document.getElementById('diagram');
+  if(!sc.root){d.innerHTML='<p class="hint">No root node. Use the panel to add a start node.</p>';return;}
+  const {svg}=buildSVG(sc.root,false);
+  d.innerHTML=svg;
+  d.querySelectorAll('.nodehit').forEach(el=>el.addEventListener('click',()=>{selUid=+el.getAttribute('data-uid');renderScenario();}));
+}
+
+// ---------- node editor ----------
+function renderNodeEditor(){
+  const box=document.getElementById('nodeEditor');const sc=cur();
+  if(!sc.root){box.innerHTML='<button class="add" onclick="addRoot()">+ Add start node</button>';return;}
+  if(!selUid){box.innerHTML='<p class="hint">No box selected. Click a box in the diagram.</p>';return;}
+  const f=findWithParent(sc.root,selUid);if(!f){box.innerHTML='<p class="hint">Selection lost.</p>';return;}
+  const n=f.node;
+  let h='';
+  h+=`<label>Text (plain story + technical detail in brackets)</label><textarea id="e_t" rows="3">${esc(n.t)}</textarea>`;
+  h+=`<label>Type</label><select id="e_type">${['start','decision','step','io','terminal'].map(t=>`<option ${n.type===t?'selected':''}>${t}</option>`).join('')}</select>`;
+  h+=`<label>Layer</label><select id="e_layer">${['safety','conversation','fallback','system'].map(l=>`<option ${n.layer===l?'selected':''}>${l}</option>`).join('')}</select>`;
+  if(n.type==='terminal')h+=`<label><input type="checkbox" id="e_alert" ${n.alert?'checked':''}> Alert terminal (red)</label>`;
+  if(n.type==='decision'){h+=`<label>YES label</label><input type="text" id="e_yl" value="${esc(n.yesLabel||'YES')}">`;h+=`<label>NO label</label><input type="text" id="e_nl" value="${esc(n.noLabel||'NO')}">`;}
+  h+=`<button class="full" onclick="applyNode()">Apply changes to this box</button>`;
+  // add-child controls
+  h+='<div style="margin-top:12px;border-top:1px dashed var(--line);padding-top:8px"><b style="font-size:12px">Add a box below this one</b>';
+  if(n.type==='decision'){
+    h+=childAdder('yes','YES branch',n.yes);
+    h+=childAdder('no','NO branch',n.no);
+  } else if(n.type!=='terminal'){
+    h+=childAdder('next','next step',n.next);
+  } else {
+    h+='<p class="hint">Terminals end a path — they cannot have children.</p>';
+  }
+  h+='</div>';
+  // delete sub-flow
+  if(f.parent){h+=`<button class="del full" style="margin-top:12px" onclick="delNode()">🗑 Delete this box and everything below it (sub-flow)</button>`;}
+  else {h+=`<p class="hint" style="margin-top:12px">This is the start node; delete its children individually, or clear the whole scenario.</p>`;}
+  box.innerHTML=h;
+}
+function childAdder(slot,label,existing){
+  if(existing)return `<p class="hint">${label}: already set (select that box to edit/delete it).</p>`;
+  const sel=`<select id="add_${slot}"><option value="step">step</option><option value="io">io</option><option value="decision">decision</option><option value="terminal">terminal</option></select>`;
+  return `<div class="addrow"><span style="font-size:12px;min-width:80px">${label}:</span>${sel}<button class="add" onclick="addChild('${slot}')">+ Add</button></div>`;
+}
+function applyNode(){
+  const sc=cur();const f=findWithParent(sc.root,selUid);if(!f)return;const n=f.node;
+  n.t=document.getElementById('e_t').value;
+  const newType=document.getElementById('e_type').value;
+  n.layer=document.getElementById('e_layer').value;
+  if(document.getElementById('e_alert'))n.alert=document.getElementById('e_alert').checked;
+  if(document.getElementById('e_yl')){n.yesLabel=document.getElementById('e_yl').value;n.noLabel=document.getElementById('e_nl').value;}
+  // type change: fix child slots
+  if(newType!==n.type){
+    n.type=newType;
+    if(newType==='decision'){delete n.next;if(!('yes'in n))n.yes=null;if(!('no'in n))n.no=null;}
+    else if(newType==='terminal'){delete n.next;delete n.yes;delete n.no;delete n.yesLabel;delete n.noLabel;}
+    else{delete n.yes;delete n.no;delete n.yesLabel;delete n.noLabel;if(!('next'in n))n.next=null;}
+    if(newType!=='terminal')delete n.alert;
+  }
+  cleanNulls(n);
+  renderScenario();toast('Box updated','ok');
+}
+function cleanNulls(n){['yes','no','next'].forEach(k=>{if(n[k]===null)delete n[k];});}
+function addChild(slot){
+  const sc=cur();const f=findWithParent(sc.root,selUid);if(!f)return;const n=f.node;
+  if(n.type==='terminal'){toast('Terminals cannot have children','warn');return;}
+  const type=document.getElementById('add_'+slot).value;
+  const child={type,t:'New '+type,layer:n.layer||'system'};
+  if(type==='decision'){child.yesLabel='YES';child.noLabel='NO';}
+  if(type==='terminal'){/* leave */}
+  n[slot]=child;
+  assignUids(sc.root);selUid=child._uid;
+  renderScenario();toast('Added '+type+' on '+slot,'ok');
+}
+function addRoot(){const sc=cur();sc.root={type:'start',t:'New start',layer:'system'};assignUids(sc.root);selUid=sc.root._uid;renderScenario();}
+function delNode(){
+  const sc=cur();const f=findWithParent(sc.root,selUid);if(!f||!f.parent)return;
+  const id=idOf(sc);
+  confirmModal('Delete this box and the entire sub-flow beneath it? This cannot be undone.',ok=>{
+    if(!ok)return;
+    delete f.parent[f.slot];
+    selUid=null;assignUids(sc.root);renderScenario();toast('Sub-flow deleted','ok');
+  });
+}
+
+// ---------- validation (warn only) ----------
+function renderValidation(){
+  const sc=cur();const v=document.getElementById('validation');const issues=[];
+  const walk=(n)=>{if(!n||typeof n!=='object')return;
+    if(n.type==='decision'){if(!n.yes)issues.push(idOf(sc)+': a decision is missing its YES branch');if(!n.no)issues.push('a decision is missing its NO branch');}
+    if(n.type==='terminal'&&n.layer==='safety'&&!n.alert){const t=(n.t||'');if(!/Info|notify|log|ambient|perceivable|never silent|hand|route/i.test(t))issues.push('possible SILENT safety terminal: "'+(t.slice(0,40))+'…" (a real safety outcome must be perceivable)');}
+    if(n.type==='decision'&&n.layer==='safety'){const t=(n.t||'').toLowerCase();if((t.includes('unknown')||t.includes('unrecogn'))&&!t.includes('not used')&&!t.includes('not whether')&&!t.includes('recognise'))issues.push('identity word inside a SAFETY trigger — identity should only GRADE after the alarm, not gate it');}
+    if(n.t&&!n.t.includes('(')&&n.type!=='start')issues.push('node has no plain-language/technical split: "'+n.t.slice(0,30)+'…" (use story + (technical) )');
+    ['yes','no','next'].forEach(k=>{if(n[k])walk(n[k]);});
+  };
+  if(sc.root)walk(sc.root);
+  if(!issues.length){v.innerHTML='<div class="ok">✓ No structural/safety warnings.</div>';return;}
+  v.innerHTML='<b style="font-size:12px">Warnings (save still allowed):</b>'+issues.map(i=>`<div class="issue">⚠ ${esc(i)}</div>`).join('');
+}
+
+// ---------- JSON sync ----------
+function stripMeta(n){const c={};for(const k in n){if(k.startsWith('_'))continue;if(['yes','no','next'].includes(k)){if(n[k])c[k]=stripMeta(n[k]);}else c[k]=n[k];}return c;}
+function scenarioOut(sc){return {name:sc.name,situation:sc.situation,version:(sc.versions||['v2'])[0],versions:sc.versions||['v2'],priority:sc.priority,outcome:sc.outcome,outcomeClass:sc.outcomeClass||'oc-alert',why:sc.why,comment:sc.comment||'',root:sc.root?stripMeta(sc.root):null};}
+function refreshJSON(){document.getElementById('jsonArea').value=JSON.stringify({type:'sena_scenario_tree',schemaVersion:2,scenario:scenarioOut(cur())},null,2);}
+function applyJSON(){
+  let d;try{d=JSON.parse(document.getElementById('jsonArea').value);}catch(e){toast('Invalid JSON: '+e.message,'err');return;}
+  const s=d.scenario||d;if(!s.root){toast('JSON has no root node','err');return;}
+  const sc=cur();Object.assign(sc,s);if(!sc.versions)sc.versions=sc.version?[sc.version]:['v2'];sc._cat=catOf(idOf(sc));
+  selUid=null;assignUids(sc.root);renderTabs();renderScenario();toast('JSON applied → diagram updated','ok');
+}
+function toggleJSON(){const w=document.getElementById('jsonWrap');const open=w.style.display!=='none';w.style.display=open?'none':'block';document.querySelector('.jsonbox h3').textContent=(open?'▸':'▾')+' Raw JSON (click to '+(open?'expand':'collapse')+') — edit and Apply';}
+
+// ---------- export ----------
+function download(name,text){const b=new Blob([text],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;a.click();}
+function saveLocal(){const sc=cur();download(idOf(sc).replace(/-/g,'_')+'.json',JSON.stringify({type:'sena_scenario_tree',schemaVersion:2,scenario:scenarioOut(sc)},null,2));}
+function exportAll(){download('SENA_scenarios_export.json',JSON.stringify({type:'sena_v2_scenarios',schemaVersion:2,count:scenarios.length,scenarios:scenarios.map(scenarioOut)},null,2));}
+
+// ---------- print to PDF (board-pack style) ----------
+function printPack(list,title){
+  let cards='';
+  list.forEach(sc=>{
+    const {svg,legend}=buildSVG(sc.root,true);
+    const id=idOf(sc),name=esc(sc.name.slice(id.length).trim());
+    const vers=(sc.versions||[sc.version]).filter(Boolean).map(v=>v.toUpperCase()).join(', ');
+    const lg=legend.map(l=>`<span class="lg"><i style="background:${LAYER[l]}"></i>${LAYERN[l]}</span>`).join('');
+    cards+=`<section class="card"><div class="meta"><h2><span class="id">${esc(id)}</span> ${name}</h2>
+      <div class="tags"><span class="tag">Versions: ${esc(vers)}</span><span class="tag">Priority: ${esc(sc.priority||'')}</span><span class="legend">${lg}</span></div>
+      <p class="sit"><b>Situation.</b> ${esc(sc.situation||'')}</p>
+      <p class="out"><b>Outcome.</b> ${esc(sc.outcome||'')}</p>
+      <p class="why"><b>Why / rationale.</b> ${esc(sc.why||'')}</p></div>
+      <div class="diagram">${svg}</div></section>`;
+  });
+  const html=`<!doctype html><html><head><meta charset="utf-8"><title>${esc(title)}</title><style>
+    body{margin:0;background:#fff;color:#16243a;font-family:Georgia,serif;line-height:1.5}
+    header{background:#2a7a2a;color:#fff;padding:20px 28px}header h1{margin:0;font-size:24px}
+    .wrap{max-width:1180px;margin:0 auto;padding:20px 28px}
+    .card{background:#fff;border:1px solid #d9d6cc;border-radius:12px;padding:24px 28px;margin:22px 0}
+    .meta h2{margin:0 0 8px;font-size:21px}.meta h2 .id{background:#16243a;color:#fff;padding:2px 12px;border-radius:8px;font-size:17px;margin-right:8px}
+    .tags{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}
+    .tag{background:#f0ece2;border:1px solid #d9d6cc;border-radius:20px;padding:3px 14px;font-size:13px}
+    .legend{display:inline-flex;gap:14px}.lg{font-size:13px;color:#2b3a3a;display:inline-flex;align-items:center;gap:5px}.lg i{width:13px;height:13px;border-radius:3px;display:inline-block}
+    .meta p{margin:6px 0;font-size:15px}.sit{color:#2d4a6b}.out{color:#b03a2e}.why{color:#555;font-size:14px}
+    .diagram{width:100%;overflow-x:auto;margin-top:14px;border-top:1px dashed #d9d6cc;padding-top:16px}
+    @media print{.card{page-break-inside:avoid;break-inside:avoid;border:none;margin:0;padding:16px 0}.card+.card{page-break-before:always}.wrap{max-width:none;padding:0 10px}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}header{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+  </style></head><body><header><h1>${esc(title)}</h1></header><div class="wrap">${cards}</div>
+  <script>window.onload=function(){setTimeout(function(){window.print();},400);}<\/script></body></html>`;
+  const w=window.open('','_blank');w.document.write(html);w.document.close();
+}
+function printScenario(){const sc=cur();printPack([sc],'SENA — '+idOf(sc)+' '+sc.name.slice(idOf(sc).length).trim());}
+function printCategory(){const list=scenarios.filter(s=>s._cat===activeCat);if(!list.length){toast('No scenarios in this category','warn');return;}printPack(list,'SENA — '+activeCat+' Scenarios');}
+</script>
+</body>
+</html>
