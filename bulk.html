@@ -182,8 +182,10 @@ function renderTabs(){
 }
 
 // ---------- uid assignment + tree walk ----------
-let _uidc=0;
-function assignUids(n){if(!n||typeof n!=='object')return;n._uid=++_uidc;['yes','no','next'].forEach(k=>{if(n[k])assignUids(n[k]);});}
+function assignUids(root){ // deterministic: same tree structure → same uids, so a selected box survives re-render
+  let c=0;
+  (function w(n){if(!n||typeof n!=='object')return;n._uid=++c;['yes','no','next'].forEach(k=>{if(n[k])w(n[k]);});})(root);
+}
 function findWithParent(root,uid,parent=null,slot=null){
   if(!root||typeof root!=='object')return null;
   if(root._uid===uid)return{node:root,parent,slot};
